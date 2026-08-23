@@ -18,6 +18,14 @@ function magnus_terms(
     H = channels.operators
     f = channels.drivings
     bracket(idxs) = time_ordered_integral([f[a] for a in idxs], t0, t; npoints)
+
+    # Inner commutators [H^{(a)}, H^{(b)}] for a < b, built on demand and
+    # memoized: at third order each one is needed by `nc` separate terms.
+    pairs = Dict{Tuple{Int, Int}, MPO}()
+    pair_commutator(a, b) = get!(
+        () -> commutator(H[a], H[b]; cutoff, maxdim), pairs, (a, b)
+    )
+
     terms = MPO[]
 
     # Ω₁ = Σₐ [fₐ] H^{(a)}
@@ -28,27 +36,28 @@ function magnus_terms(
     end
     order == 1 && return terms
 
-    # Ω₂ = ½ Σₐᵦ [fₐfᵦ] [H^{(a)}, H^{(b)}]
-    for a in 1:nc, b in 1:nc
-        a == b && continue          # [H^{(a)}, H^{(a)}] = 0
-        coeff = bracket((a, b)) / 2
-        iszero(coeff) && continue
-        push!(terms, coeff * commutator(H[a], H[b]; cutoff, maxdim))
+    # Ω₂ = ½ Σₐᵦ [fₐfᵦ] [H^{(a)}, H^{(b)}].
+    # The a = b terms vanish, and antisymmetry of the commutator folds
+    # (b,a) onto (a,b), recovering the paper's α = ½([fₐfᵦ] - [fᵦfₐ]).
+    for a in 1:nc, b in (a + 1):nc
+        α = (bracket((a, b)) - bracket((b, a))) / 2
+        iszero(α) && continue
+        push!(terms, α * pair_commutator(a, b))
     end
     order == 2 && return terms
 
     # Ω₃ = ⅙ Σₐᵦ𝚌 [fₐfᵦf𝚌] ( [[H^{(a)},H^{(b)}],H^{(c)}] + [H^{(a)},[H^{(b)},H^{(c)}]] )
-    for a in 1:nc, b in 1:nc, c in 1:nc
-        coeff = bracket((a, b, c)) / 6
+    # Each nested commutator is likewise folded onto its ordered inner pair.
+    κ(a, b, c) = bracket((a, b, c)) / 6
+    for a in 1:nc, b in (a + 1):nc, c in 1:nc
+        coeff = κ(a, b, c) - κ(b, a, c)
         iszero(coeff) && continue
-        if a != b               # otherwise [[H^{(a)},H^{(b)}],·] vanishes
-            inner_ab = commutator(H[a], H[b]; cutoff, maxdim)
-            push!(terms, coeff * commutator(inner_ab, H[c]; cutoff, maxdim))
-        end
-        if b != c               # otherwise [·,[H^{(b)},H^{(c)}]] vanishes
-            inner_bc = commutator(H[b], H[c]; cutoff, maxdim)
-            push!(terms, coeff * commutator(H[a], inner_bc; cutoff, maxdim))
-        end
+        push!(terms, coeff * commutator(pair_commutator(a, b), H[c]; cutoff, maxdim))
+    end
+    for a in 1:nc, b in 1:nc, c in (b + 1):nc
+        coeff = κ(a, b, c) - κ(a, c, b)
+        iszero(coeff) && continue
+        push!(terms, coeff * commutator(H[a], pair_commutator(b, c); cutoff, maxdim))
     end
     return terms
 end
@@ -98,7 +107,7 @@ function magnus_generator(
     terms = magnus_terms(channels, t0, t; order, cutoff, maxdim, npoints)
     isempty(terms) && return 0.0 * identity_mpo(channels)
     length(terms) == 1 && return only(terms)
-    return +(terms...; cutoff, maxdim)
+    return sum(terms; cutoff, maxdim)
 end
 
 """

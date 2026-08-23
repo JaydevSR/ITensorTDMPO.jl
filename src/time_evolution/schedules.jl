@@ -8,10 +8,10 @@ perform a global Krylov subspace expansion (see `ITensorMPS.expand` with
 needed when `nsite == 1`, since 1-site TDVP cannot grow the MPS bond
 dimension on its own.
 """
-struct TDVPStepSpec
+struct TDVPStepSpec{K <: NamedTuple}
     nsite::Int
     expand_krylov::Bool
-    expand_kwargs::NamedTuple
+    expand_kwargs::K
 end
 
 function TDVPStepSpec(; nsite, expand_krylov = false, expand_kwargs = (;))

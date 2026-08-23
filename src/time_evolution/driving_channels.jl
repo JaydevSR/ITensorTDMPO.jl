@@ -84,7 +84,7 @@ Assemble `H(t) = Σₐ fₐ(t) H^{(a)}` as an MPO.
 function (channels::DrivingChannels)(t; cutoff = 1.0e-14, maxdim = typemax(Int))
     terms = [channels.drivings[a](t) * channels.operators[a] for a in 1:nchannels(channels)]
     length(terms) == 1 && return only(terms)
-    return +(terms...; cutoff, maxdim)
+    return sum(terms; cutoff, maxdim)
 end
 
 """

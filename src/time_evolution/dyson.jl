@@ -17,16 +17,19 @@ function dyson_terms(
     nc = nchannels(channels)
     terms = MPO[identity_mpo(channels)]
     # `partials` maps each operator string (a₁, …, aₙ) to the MPO product
-    # H^{(a₁)} ⋯ H^{(aₙ)}, reused when building order n+1.
+    # H^{(a₁)} ⋯ H^{(aₙ)}. Only the current order is held at a time; each
+    # level is extended from the previous one rather than rebuilt, so the
+    # products are shared across the `nc` extensions of each string.
     partials = Pair{Vector{Int}, MPO}[]
-    for a in 1:nc
-        push!(partials, [a] => channels.operators[a])
-    end
     for n in 1:order
-        if n > 1
-            next = Pair{Vector{Int}, MPO}[]
+        if n == 1
+            partials = [[a] => channels.operators[a] for a in 1:nc]
+        else
+            next = Vector{Pair{Vector{Int}, MPO}}(undef, length(partials) * nc)
+            i = 0
             for (combo, P) in partials, b in 1:nc
-                push!(next, vcat(combo, b) => apply(P, channels.operators[b]; cutoff, maxdim))
+                next[i += 1] =
+                    vcat(combo, b) => apply(P, channels.operators[b]; cutoff, maxdim)
             end
             partials = next
         end
@@ -89,7 +92,7 @@ function dyson_mpo(
     )
     terms = dyson_terms(channels, t0, t; order, cutoff, maxdim, npoints)
     length(terms) == 1 && return only(terms)
-    return +(terms...; cutoff, maxdim)
+    return sum(terms; cutoff, maxdim)
 end
 
 """

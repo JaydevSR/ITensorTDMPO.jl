@@ -1,4 +1,28 @@
 """
+    cumulative_integral!(F, y, h)
+
+In-place [`cumulative_integral`](@ref), writing into `F`.
+"""
+function cumulative_integral!(F::AbstractVector, y::AbstractVector, h)
+    n = length(y)
+    if length(F) != n
+        throw(DimensionMismatch("output has length $(length(F)), input has length $n."))
+    end
+    n == 0 && return F
+    F[1] = 0
+    n == 1 && return F
+    if n == 2
+        F[2] = h * (y[1] + y[2]) / 2
+        return F
+    end
+    F[2] = h * (5y[1] + 8y[2] - y[3]) / 12
+    @inbounds for i in 3:n
+        F[i] = F[i - 2] + h * (y[i - 2] + 4y[i - 1] + y[i]) / 3
+    end
+    return F
+end
+
+"""
     cumulative_integral(y::AbstractVector, h)
 
 Cumulative integral of samples `y` on a uniform grid of spacing `h`,
@@ -9,19 +33,19 @@ three-point formula for the first sub-interval so that odd-indexed
 points are also fourth-order accurate.
 """
 function cumulative_integral(y::AbstractVector, h)
-    n = length(y)
     T = typeof(zero(eltype(y)) * zero(h))
-    F = zeros(T, n)
-    n <= 1 && return F
-    if n == 2
-        F[2] = h * (y[1] + y[2]) / 2
-        return F
+    return cumulative_integral!(Vector{T}(undef, length(y)), y, h)
+end
+
+# Function barrier. The driving functions arrive from a container with
+# abstract element type (`Vector{Function}`), so calling one element-wise
+# would dispatch dynamically at every grid point. Specializing this helper
+# on `typeof(f)` reduces that to a single dynamic dispatch per level.
+function _sample_scaled!(y, f::F, grid, g) where {F}
+    @inbounds for i in eachindex(y, grid, g)
+        y[i] = f(grid[i]) * g[i]
     end
-    F[2] = h * (5y[1] + 8y[2] - y[3]) / 12
-    for i in 3:n
-        F[i] = F[i - 2] + h * (y[i - 2] + 4y[i - 1] + y[i]) / 3
-    end
-    return F
+    return y
 end
 
 """
@@ -48,7 +72,7 @@ The empty bracket `[]` (`n == 0`) is `1`.
 The nested integrals are evaluated by repeated cumulative quadrature on a
 uniform grid of `npoints` points, which costs `O(n · npoints)` rather than
 the `O(npoints^n)` of naive nested quadrature. `npoints` is rounded up to
-an odd number.
+an odd number. Two work buffers are allocated per call regardless of `n`.
 
 # Examples
 
@@ -66,11 +90,13 @@ function time_ordered_integral(fs, t0, t; npoints::Integer = 1025)
     grid = range(float(t0), float(t); length = npoints)
     h = step(grid)
     # `g` holds the running inner integral; it starts as g_{n+1} ≡ 1.
+    # `y` is scratch for the integrand of the current level. `y` is fully
+    # written before `g` is overwritten, so the two can alternate safely.
     g = ones(ComplexF64, npoints)
+    y = Vector{ComplexF64}(undef, npoints)
     for k in n:-1:1
-        f = fs[k]
-        y = ComplexF64[f(x) for x in grid] .* g
-        g = cumulative_integral(y, h)
+        _sample_scaled!(y, fs[k], grid, g)
+        cumulative_integral!(g, y, h)
     end
     return (-im)^n * g[end]
 end

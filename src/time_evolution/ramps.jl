@@ -126,6 +126,9 @@ function Ramp(shape::RampShape, t_start, t_stop, value_start, value_stop)
     t_start, t_stop, value_start, value_stop = promote(
         float(t_start), float(t_stop), float(value_start), float(value_stop)
     )
+    # Not recursive: once the four values share a type, the struct's own
+    # constructor `Ramp(::Shape, ::T, ::T, ::T, ::T)` is more specific
+    # than this method and wins dispatch.
     return Ramp(shape, t_start, t_stop, value_start, value_stop)
 end
 
