@@ -1,0 +1,21 @@
+name = "ITensorMPSExtended"
+uuid = "81a1b4ac-87ef-45f6-9a65-eae7fbb20350"
+version = "0.1.0"
+authors = ["u0174972"]
+
+[deps]
+ITensorMPS = "0d1a4710-d33b-49a5-8f18-73bdf49b47e2"
+ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+ITensorMPS = "0.4.1"
+ITensors = "0.9.30"
+Test = "1.11.0"
+julia = "1.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
