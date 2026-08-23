@@ -36,6 +36,14 @@ struct DrivingChannels{F <: AbstractVector, S}
     sites::S
 end
 
+# The site indices an MPO was *built from*. `firstsiteinds` returns the
+# MPO's own unprimed leg, which for a QN-conserving MPO carries the
+# opposite arrow to the index the user passed to `siteinds`; building an
+# identity MPO from those flipped indices yields something that cannot be
+# contracted with the Hamiltonians. `dag` restores the original arrows,
+# and is a no-op without QNs.
+_ket_siteinds(H::MPO) = dag(firstsiteinds(H))
+
 function DrivingChannels(operators::AbstractVector{MPO}, drivings::AbstractVector)
     if length(operators) != length(drivings)
         throw(
@@ -45,9 +53,9 @@ function DrivingChannels(operators::AbstractVector{MPO}, drivings::AbstractVecto
         )
     end
     isempty(operators) && throw(ArgumentError("`DrivingChannels` needs at least one channel."))
-    sites = firstsiteinds(first(operators))
+    sites = _ket_siteinds(first(operators))
     for (a, H) in enumerate(operators)
-        if firstsiteinds(H) != sites
+        if _ket_siteinds(H) != sites
             throw(ArgumentError("channel $a has site indices differing from channel 1."))
         end
     end

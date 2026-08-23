@@ -30,6 +30,37 @@ The Dyson and Magnus drivers implement the constructions of
 Series*](https://arxiv.org/abs/2605.21597) — see [Scope](#scope) for what
 is and is not implemented.
 
+### Which driver to use
+
+**Use `magnus_evolve`.** Measured infidelity against a converged reference
+for a driven TFIM chain at fixed `dt = 0.05`, order 2, versus chain length:
+
+| N | `piecewise_constant_tdvp` | `dyson_evolve` | `magnus_evolve` |
+|---|---|---|---|
+| 4 | 9.9e-8 | 5.0e-7 | **3.9e-11** |
+| 6 | 1.5e-7 | 2.8e-6 | **6.6e-11** |
+| 10 | 2.5e-7 | 2.9e-5 | **1.2e-10** |
+| 14 | 3.6e-7 | 1.4e-4 | **1.7e-10** |
+| 20 | 5.1e-7 | 7.9e-4 | **2.5e-10** |
+
+Over that range the frozen and Magnus errors both grow roughly linearly in
+`N`, while the Dyson error grows by a factor of ~1600 (≈ `N^4.7` for this
+model). **`dyson_evolve` is already worse than simply freezing the
+Hamiltonian by N ≈ 4, and the gap widens quickly.**
+
+The reason is the size-extensivity issue at the heart of the paper.
+`magnus_evolve` builds the generator `Ω` and applies `exp(Ω)`, and the
+exponential resums all *disjoint* higher-order products correctly to all
+orders — so extensivity comes for free. `dyson_evolve` truncates a
+polynomial in `H`, discarding an order-`N+1` term whose disjoint part
+scales as `N^{N+1}`, with nothing to resum it. The paper's size-extensive
+MPO encoding is exactly what repairs this, and it is the part not
+implemented here (see [Scope](#scope)).
+
+So `dyson_mpo` is best regarded as a reference implementation of the
+series — useful for small systems, short steps, and for checking the
+Magnus results against — rather than a production driver.
+
 ---
 
 ## Ramps
@@ -221,9 +252,13 @@ of the paper's Sec. VII is implemented.
 
 The practical consequences:
 
-- **Finite systems only.** The direct construction is well defined on finite
-  chains. It is *not* size-extensive, so it does not carry over to the
-  thermodynamic limit, which is a large part of what the paper's encoding buys.
+- **Finite systems only.** `ITensorMPS` represents only finite MPS/MPO, so
+  everything here is finite by construction; infinite systems would need
+  `ITensorInfiniteMPS.jl` or MPSKit.jl.
+- **Accuracy degrades with chain length for `dyson_evolve`**, because the
+  direct construction is not size-extensive — see the measured scaling in
+  [Which driver to use](#which-driver-to-use). `magnus_evolve` is not
+  affected, since exponentiating the generator resums the disjoint terms.
 - **Bond dimension grows faster** than the paper's compressed construction.
   Intermediate products are truncated with `cutoff`/`maxdim` to keep this in
   check, but expect the MPO bond dimension to be the practical limit on

@@ -213,6 +213,56 @@ end
     @test dense_matrix(U0, sites) ≈ dense_matrix(identity_mpo(ch), sites) rtol = 1.0e-10
 end
 
+@testset "QN-conserving systems" begin
+    # Regression: `firstsiteinds` returns the MPO's own unprimed leg,
+    # whose QN arrow is opposite to the index the user passed to
+    # `siteinds`. Building the identity MPO from those flipped indices
+    # made every Dyson order fail to contract under `conserve_qns`.
+    n = 6
+    sites = siteinds("S=1/2", n; conserve_qns = true)
+    zz = OpSum()
+    for j in 1:(n - 1)
+        zz += -1.0, "Sz", j, "Sz", j + 1
+    end
+    hop = OpSum()
+    for j in 1:(n - 1)
+        hop += -0.5, "S+", j, "S-", j + 1
+        hop += -0.5, "S-", j, "S+", j + 1
+    end
+    Hzz, Hhop = MPO(zz, sites), MPO(hop, sites)
+
+    # The stored site indices must match what the user supplied.
+    ch = DrivingChannels(Hzz => (t -> 1.0), Hhop => (t -> sin(4t) + 0.5))
+    @test ITensorMPS.siteinds(ch) == sites
+
+    ψ0 = MPS(ComplexF64, sites, n -> isodd(n) ? "Up" : "Dn")
+    # The identity MPO must be addable to a channel operator.
+    @test maxlinkdim(+(identity_mpo(ch), Hzz; cutoff = 1.0e-14)) > 0
+
+    g = t -> sin(4t) + 0.5
+    T = 0.2
+    ref = piecewise_constant_tdvp(
+        Hzz, t -> g(t) * Hhop, ψ0, 0.0, T; nsteps = 200,
+        tdvp_kwargs = (; cutoff = 1.0e-14, maxdim = 128)
+    )
+    ψ_dyson = dyson_evolve(
+        ch, ψ0, 0.0, T; nsteps = 4, order = 2,
+        mpo_kwargs = (; cutoff = 1.0e-14, maxdim = 128),
+        apply_kwargs = (; cutoff = 1.0e-14, maxdim = 128)
+    )
+    ψ_magnus = magnus_evolve(
+        ch, ψ0, 0.0, T; nsteps = 4, order = 2,
+        generator_kwargs = (; cutoff = 1.0e-14, maxdim = 128),
+        tdvp_kwargs = (; cutoff = 1.0e-14, maxdim = 128, nsteps = 4)
+    )
+
+    @test abs(inner(ref, ψ_dyson)) ≈ 1.0 atol = 1.0e-4
+    @test abs(inner(ref, ψ_magnus)) ≈ 1.0 atol = 1.0e-4
+    # Both must stay in the initial symmetry sector.
+    @test flux(ψ_dyson) == flux(ψ0)
+    @test flux(ψ_magnus) == flux(ψ0)
+end
+
 @testset "step observers" begin
     sites, Hzz, Hx = test_model(5)
     ch = DrivingChannels(Hzz => (t -> 1.0), Hx => (t -> cos(t)))
