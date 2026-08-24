@@ -61,6 +61,38 @@ So `dyson_mpo` is best regarded as a reference implementation of the
 series — useful for small systems, short steps, and for checking the
 Magnus results against — rather than a production driver.
 
+### Magnus vs. piecewise-constant TDVP: equal-error runtime
+
+Measured on the paper's modulated TFIM over one period at `N = 8` with
+exact bond dimension (so truncation contributes nothing), against an
+exact dense RK4 reference:
+
+| method | convergence order | cost per step |
+|---|---|---|
+| `piecewise_constant_tdvp` | **2.0** | 1.0× |
+| `magnus_evolve` order 2 | **~3.9** | ~2.1× |
+| `magnus_evolve` order 3 | ~3.8 | ~2.6× |
+
+Magnus costs about twice as much per step but converges at roughly fourth
+order rather than second, so the equal-accuracy speedup *grows* as the
+tolerance tightens:
+
+| target error | `magnus_evolve` order 2 | `piecewise_constant_tdvp` | speedup |
+|---|---|---|---|
+| 5.6e-4 | 8 steps, 4.4 s | ~65 steps, 16 s | **3.7×** |
+| 3.7e-5 | 16 steps, 9.4 s | ~252 steps, 64 s | **6.8×** |
+| 2.4e-6 | 32 steps, 19 s | ~988 steps, 249 s | **13.3×** |
+
+Asymptotically the ratio scales as `ε^(-1/4)`: reaching error `ε` needs
+`ns ∝ ε^(-1/2)` segmented steps but only `ns ∝ ε^(-1/4)` Magnus steps.
+Below about `1e-6` the order-2 Magnus error flattens against the internal
+TDVP exponentiation error — raise `tdvp_kwargs.nsteps` there.
+
+Note that order 3 was not better than order 2 in this test: both converge
+at fourth order, and order 3 costs more per step. `Ω₁ + Ω₂` with exact
+time-ordered integrals is already a fourth-order integrator, so **order 2
+is the sensible default**.
+
 ---
 
 ## Ramps
