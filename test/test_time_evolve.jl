@@ -103,6 +103,31 @@ end
         @test time_evolve([(one, Hzz), (g, Hx)], ψ0, range(0.0, T; length = 3); alg) isa MPS
     end
 
+    # A plain number is a constant coefficient. `(1.0, H)` must match `one`.
+    ψ_const1 = time_evolve([(1.0, Hzz), (g, Hx)], ψ0, 0.0, T; nsteps = ns)
+    @test fid(ψ_explicit, ψ_const1) ≈ 1.0 atol = 1.0e-10
+
+    # A constant other than 1 scales the channel: (J, H) == (t -> J, H).
+    J = -2.5
+    ψ_constJ = time_evolve([(J, Hzz), (g, Hx)], ψ0, 0.0, T; nsteps = ns)
+    ψ_funcJ = time_evolve([(t -> J, Hzz), (g, Hx)], ψ0, 0.0, T; nsteps = ns)
+    @test fid(ψ_constJ, ψ_funcJ) ≈ 1.0 atol = 1.0e-10
+    # ...and is genuinely different from J = 1.
+    @test fid(ψ_constJ, ψ_const1) < 0.999
+
+    # Integers and complex constants are accepted too.
+    @test fid(time_evolve([(1, Hzz), (g, Hx)], ψ0, 0.0, T; nsteps = ns), ψ_explicit) ≈ 1.0 atol =
+        1.0e-10
+    @test time_evolve([(2.0 + 0.0im, Hzz), (g, Hx)], ψ0, 0.0, T; nsteps = ns) isa MPS
+
+    # A constant reproduces the assembled H(t) exactly.
+    chJ = DrivingChannels([(J, Hzz), (0.0, Hx)])
+    @test maxlinkdim(chJ(0.3)) > 0
+    @test isapprox(inner(ψ0', chJ(0.3), ψ0), J * inner(ψ0', Hzz, ψ0); rtol = 1.0e-8)
+
+    # Something that is neither callable nor a number is rejected.
+    @test_throws ArgumentError DrivingChannels([("not a driving", Hzz)])
+
     # DrivingChannels accepts the same forms directly.
     @test nchannels(DrivingChannels([(one, Hzz), (g, Hx)])) == 2
     @test nchannels(DrivingChannels((one, Hzz), (g, Hx))) == 2

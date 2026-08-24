@@ -23,21 +23,30 @@ integrator:
 ```julia
 ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
 
-ψ = time_evolve([(one, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
+ψ = time_evolve([(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
                 nsteps = 100, cutoff = 1e-10, maxdim = 128)
 
 # Same Hamiltonian, different integrator — nothing else changes.
-ψ = time_evolve([(one, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
+ψ = time_evolve([(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
                 alg = "piecewise_constant", nsteps = 100)
 ```
 
-Channels are given as a list of `(driving function, MPO)` tuples. The MPO
-and the function are told apart by type, so `(H, f)` works as well as
-`(f, H)`, and `H => f` pairs are accepted too. `one` serves as the
-constant driving function for a static term. If you want to reuse the
-decomposition across calls, build it explicitly with
-`DrivingChannels([(one, Hzz), (ramp, Hx)])` and pass that instead — every
-entry point accepts either.
+Channels are given as a list of `(driving, MPO)` tuples. The MPO and the
+driving are told apart by type, so `(H, f)` works as well as `(f, H)`, and
+`H => f` pairs are accepted too.
+
+A driving is either **a function of time** or **a plain number** for a
+constant coefficient — `(J, H)` is shorthand for the static term `J * H`:
+
+```julia
+[(1.0, Hzz), (ramp, Hx)]     # unit coupling
+[(-2.5, Hzz), (ramp, Hx)]    # any constant
+[(1.0, Hzz), (ramp, Hx)]     # equivalent to (1.0, Hzz)
+```
+
+If you want to reuse the decomposition across calls, build it explicitly
+with `DrivingChannels([(1.0, Hzz), (ramp, Hx)])` and pass that instead —
+every entry point accepts either.
 
 Three algorithms are available, in increasing order of sophistication:
 
@@ -236,7 +245,7 @@ function. This is what makes the expansions tractable: the operator content
 dependence enters through scalar integrals of the `fₐ`.
 
 ```julia
-channels = DrivingChannels([(one, Hzz), (ramp, Hx)])
+channels = DrivingChannels([(1.0, Hzz), (ramp, Hx)])
 channels(0.5)        # assembles H(0.5) as an MPO (useful for testing)
 nchannels(channels)  # 2
 ```

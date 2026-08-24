@@ -27,8 +27,11 @@ sites = siteinds("S=1/2", 8)
 Hzz = MPO(OpSum() + ..., sites)   # static coupling
 Hx  = MPO(OpSum() + ..., sites)   # transverse field
 ramp = Ramp(SmoothstepRamp(), 0.0, 1.0, 0.0, 2.0)
-channels = DrivingChannels(Hzz => one, Hx => ramp)
+channels = DrivingChannels([(1.0, Hzz), (ramp, Hx)])
 ```
+
+A driving may be any callable of time, or a `Number` for a channel with a
+constant coefficient — `(J, H)` is shorthand for the static term `J * H`.
 """
 struct DrivingChannels{F <: AbstractVector, S}
     operators::Vector{MPO}
@@ -44,6 +47,13 @@ end
 # and is a no-op without QNs.
 _ket_siteinds(H::MPO) = dag(firstsiteinds(H))
 
+# A channel may be driven by a constant coefficient rather than a function
+# of time; a `Number` is lifted to the function that returns it. This
+# covers static terms with an arbitrary strength, of which `one` is just
+# the special case of coefficient 1.
+_as_driving(f) = f
+_as_driving(c::Number) = Returns(c)
+
 function DrivingChannels(operators::AbstractVector{MPO}, drivings::AbstractVector)
     if length(operators) != length(drivings)
         throw(
@@ -53,6 +63,16 @@ function DrivingChannels(operators::AbstractVector{MPO}, drivings::AbstractVecto
         )
     end
     isempty(operators) && throw(ArgumentError("`DrivingChannels` needs at least one channel."))
+    drivings = map(_as_driving, drivings)
+    for (a, f) in enumerate(drivings)
+        if !applicable(f, 0.0)
+            throw(
+                ArgumentError(
+                    "the driving for channel $a is a $(typeof(f)), which cannot be called on a time. Pass a function of `t`, or a number for a constant coefficient."
+                )
+            )
+        end
+    end
     sites = _ket_siteinds(first(operators))
     for (a, H) in enumerate(operators)
         if _ket_siteinds(H) != sites
@@ -76,7 +96,7 @@ function _channel_pair(spec::ChannelSpec)
     b isa MPO && !(a isa MPO) && return (b, a)
     return throw(
         ArgumentError(
-            "each channel must pair exactly one MPO with one driving function; got ($(typeof(a)), $(typeof(b)))."
+            "each channel must pair exactly one MPO with one driving (a function of `t`, or a number for a constant coefficient); got ($(typeof(a)), $(typeof(b)))."
         )
     )
 end
@@ -92,8 +112,14 @@ end
     DrivingChannels([(f1, H1), (f2, H2), ...])
     DrivingChannels(H1 => f1, H2 => f2, ...)
 
-Build the channel decomposition from a list of `(driving function, MPO)`
-tuples or pairs, in either order.
+Build the channel decomposition from a list of `(driving, MPO)` tuples or
+pairs, in either order. Each driving is a function of time, or a plain
+number for a channel with a constant coefficient:
+
+```julia
+DrivingChannels([(1.0, Hzz), (ramp, Hx)])      # J = 1 static coupling
+DrivingChannels([(-2.5, Hzz), (ramp, Hx)])     # any constant works
+```
 """
 function DrivingChannels(specs::AbstractVector)
     isempty(specs) && throw(ArgumentError("`DrivingChannels` needs at least one channel."))
