@@ -15,14 +15,41 @@ Pkg.develop(path="path/to/ITensorMPSExtended.jl")
 
 ## Overview
 
-Three time-evolution drivers are provided, in increasing order of
-sophistication:
+The Hamiltonian is always described the same way — as a set of **driving
+channels** `H(t) = Σₐ fₐ(t) H^{(a)}`, each a time-independent MPO paired
+with a scalar driving function — and a single entry point selects the
+integrator:
 
-| Driver | Treatment of `H(t)` within a step | Unitary? |
-|---|---|---|
-| `piecewise_constant_tdvp` | frozen at one evaluation point | yes (TDVP) |
-| `dyson_evolve` | expanded to order `N` in the Dyson series | approximately |
-| `magnus_evolve` | expanded to order `N` in the Magnus expansion | yes |
+```julia
+ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
+
+ψ = time_evolve([(one, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
+                nsteps = 100, cutoff = 1e-10, maxdim = 128)
+
+# Same Hamiltonian, different integrator — nothing else changes.
+ψ = time_evolve([(one, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
+                alg = "piecewise_constant", nsteps = 100)
+```
+
+Channels are given as a list of `(driving function, MPO)` tuples. The MPO
+and the function are told apart by type, so `(H, f)` works as well as
+`(f, H)`, and `H => f` pairs are accepted too. `one` serves as the
+constant driving function for a static term. If you want to reuse the
+decomposition across calls, build it explicitly with
+`DrivingChannels([(one, Hzz), (ramp, Hx)])` and pass that instead — every
+entry point accepts either.
+
+Three algorithms are available, in increasing order of sophistication:
+
+| `alg` | Treatment of `H(t)` within a step | Order | Unitary? |
+|---|---|---|---|
+| `"piecewise_constant"` | frozen at one evaluation point | 2 | yes (TDVP) |
+| `"dyson"` | expanded to order `N` in the Dyson series | `N` | approximately |
+| `"magnus"` *(default)* | expanded to order `N` in the Magnus expansion | ~4 | yes |
+
+Each also has a direct driver — [`piecewise_constant_tdvp`](#piecewise-constant-tdvp),
+`dyson_evolve`, `magnus_evolve` — which `time_evolve` forwards to; use those
+when you want a method-specific option without going through `alg_kwargs`.
 
 The Dyson and Magnus drivers implement the constructions of
 [Vanthilt, Van Damme, Haegeman, McCulloch & Vanderstraeten,
@@ -138,7 +165,7 @@ ramp(50.0)  # 2.0  (clamped)
 
 ## Piecewise-constant TDVP
 
-The simplest driver: freeze `H(t)` once per interval and run an ordinary
+The simplest algorithm: freeze `H(t)` once per interval and run an ordinary
 TDVP sweep across it.
 
 ```julia
@@ -147,13 +174,20 @@ using ITensorMPS, ITensorMPSExtended
 sites = siteinds("S=1/2", 20)
 Hzz = MPO(OpSum() + ..., sites)          # static part
 ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
-Ht = t -> ramp(t) * Hx                    # time-dependent part
+channels = DrivingChannels(Hzz => one, Hx => ramp)
 
-ψ = piecewise_constant_tdvp(
-    Hzz, Ht, ψ0, 0.0, 10.0;
-    nsteps = 200,
-    tdvp_kwargs = (; cutoff = 1e-10, maxdim = 128),
+ψ = time_evolve(
+    channels, ψ0, 0.0, 10.0;
+    alg = "piecewise_constant", nsteps = 200, cutoff = 1e-10, maxdim = 128,
 )
+```
+
+The driver `piecewise_constant_tdvp` also accepts an `H0`/`Ht` pair
+directly, which is the more general form when the time dependence is not
+channel-separable:
+
+```julia
+piecewise_constant_tdvp(Hzz, t -> ramp(t) * Hx, ψ0, 0.0, 10.0; nsteps = 200)
 ```
 
 Note the sign convention: `generator_prefactor` defaults to `-im`, so each
@@ -202,10 +236,13 @@ function. This is what makes the expansions tractable: the operator content
 dependence enters through scalar integrals of the `fₐ`.
 
 ```julia
-channels = DrivingChannels(Hzz => (t -> 1.0), Hx => ramp)
+channels = DrivingChannels([(one, Hzz), (ramp, Hx)])
 channels(0.5)        # assembles H(0.5) as an MPO (useful for testing)
 nchannels(channels)  # 2
 ```
+
+`time_evolve` builds this internally when handed a plain list, so you only
+need it explicitly to reuse one decomposition across several calls.
 
 ## Time-ordered integrals
 

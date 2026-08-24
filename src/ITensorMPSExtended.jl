@@ -8,13 +8,18 @@ using LinearAlgebra: LinearAlgebra
 include("time_evolution/ramps.jl")
 include("time_evolution/driven_hamiltonian.jl")
 include("time_evolution/schedules.jl")
-include("time_evolution/piecewise_tdvp.jl")
+# `DrivingChannels` is the shared Hamiltonian representation, so it must be
+# defined before the drivers that dispatch on it.
 include("time_evolution/time_ordered_integrals.jl")
 include("time_evolution/driving_channels.jl")
+include("time_evolution/piecewise_tdvp.jl")
 include("time_evolution/dyson.jl")
 include("time_evolution/magnus.jl")
+include("time_evolution/time_evolve.jl")
 
 export
+    # Unified entry point
+    time_evolve,
     # Ramp shapes and ramps
     RampShape,
     LinearRamp,

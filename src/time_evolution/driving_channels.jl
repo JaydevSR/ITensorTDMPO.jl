@@ -62,10 +62,45 @@ function DrivingChannels(operators::AbstractVector{MPO}, drivings::AbstractVecto
     return DrivingChannels(collect(MPO, operators), drivings, sites)
 end
 
-function DrivingChannels(pairs::AbstractVector{<:Pair})
-    return DrivingChannels(MPO[first(p) for p in pairs], [last(p) for p in pairs])
+"""
+Anything that names one channel: a `(f, H)` or `(H, f)` tuple, or an
+`H => f` / `f => H` pair.
+"""
+const ChannelSpec = Union{Pair, Tuple{Any, Any}}
+
+# The MPO and the driving function are told apart by type, so callers do
+# not have to remember an argument order.
+function _channel_pair(spec::ChannelSpec)
+    a, b = spec isa Pair ? (first(spec), last(spec)) : spec
+    a isa MPO && !(b isa MPO) && return (a, b)
+    b isa MPO && !(a isa MPO) && return (b, a)
+    return throw(
+        ArgumentError(
+            "each channel must pair exactly one MPO with one driving function; got ($(typeof(a)), $(typeof(b)))."
+        )
+    )
 end
-DrivingChannels(pairs::Pair...) = DrivingChannels(collect(pairs))
+function _channel_pair(spec)
+    return throw(
+        ArgumentError(
+            "expected each channel to be a `(f, H)` tuple or an `H => f` pair, got a $(typeof(spec))."
+        )
+    )
+end
+
+"""
+    DrivingChannels([(f1, H1), (f2, H2), ...])
+    DrivingChannels(H1 => f1, H2 => f2, ...)
+
+Build the channel decomposition from a list of `(driving function, MPO)`
+tuples or pairs, in either order.
+"""
+function DrivingChannels(specs::AbstractVector)
+    isempty(specs) && throw(ArgumentError("`DrivingChannels` needs at least one channel."))
+    prs = map(_channel_pair, specs)
+    return DrivingChannels(MPO[p[1] for p in prs], [p[2] for p in prs])
+end
+DrivingChannels(specs::ChannelSpec...) = DrivingChannels(collect(specs))
 
 """
     nchannels(channels::DrivingChannels)

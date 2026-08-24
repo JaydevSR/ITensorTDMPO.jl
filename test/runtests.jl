@@ -7,4 +7,5 @@ using Test
     include("test_time_ordered_integrals.jl")
     include("test_driving_channels.jl")
     include("test_dyson_magnus.jl")
+    include("test_time_evolve.jl")
 end

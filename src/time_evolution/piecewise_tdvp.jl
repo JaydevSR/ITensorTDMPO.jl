@@ -125,3 +125,33 @@ function piecewise_constant_tdvp(
     times = _time_grid(t_start, t_stop, dt, nsteps)
     return piecewise_constant_tdvp(H0, Ht, ψ0, times; kwargs...)
 end
+
+"""
+    piecewise_constant_tdvp(channels::DrivingChannels, ψ0::MPS, times; kwargs...)
+    piecewise_constant_tdvp(channels, ψ0, t_start, t_stop; dt, nsteps, kwargs...)
+
+Evolve `ψ0` with `H(t)` frozen on each interval, taking the Hamiltonian
+from a [`DrivingChannels`](@ref) decomposition rather than an
+`H0`/`Ht` pair. This is the form shared with [`dyson_evolve`](@ref) and
+[`magnus_evolve`](@ref), so the same Hamiltonian description drives every
+method; see [`time_evolve`](@ref) for the common entry point.
+
+`operator_cutoff`/`operator_maxdim` control the truncation used when
+assembling `H(t) = Σₐ fₐ(t) H^{(a)}` at each evaluation point; all other
+keywords are as for the `H0`/`Ht` method above.
+"""
+function piecewise_constant_tdvp(
+        channels::DrivingChannels, ψ0::MPS, times;
+        operator_cutoff = 1.0e-12, operator_maxdim = typemax(Int), kwargs...
+    )
+    Ht = t -> channels(t; cutoff = operator_cutoff, maxdim = operator_maxdim)
+    return piecewise_constant_tdvp(nothing, Ht, ψ0, times; kwargs...)
+end
+
+function piecewise_constant_tdvp(
+        channels::DrivingChannels, ψ0::MPS, t_start::Number, t_stop::Number;
+        dt = nothing, nsteps = nothing, kwargs...
+    )
+    times = _time_grid(t_start, t_stop, dt, nsteps)
+    return piecewise_constant_tdvp(channels, ψ0, times; kwargs...)
+end
