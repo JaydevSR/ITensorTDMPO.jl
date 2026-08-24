@@ -1,6 +1,6 @@
 using ITensorMPS
 using ITensors
-using ITensorMPSExtended
+using TDVPlus
 using LinearAlgebra
 using Test
 

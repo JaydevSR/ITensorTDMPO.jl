@@ -1,6 +1,6 @@
 using ITensorMPS
 using ITensors
-using ITensorMPSExtended
+using TDVPlus
 using LinearAlgebra
 using Test
 
@@ -75,6 +75,44 @@ end
         Hzz, t -> g(t) * Hx, ψ0, 0.0, 0.3; nsteps = 4, tdvp_kwargs = st
     )
     @test fid(ψ_ch, ψ_pair) ≈ 1.0 atol = 1.0e-10
+end
+
+@testset "direct drivers accept a plain list of tuples" begin
+    sites, Hzz, Hx = te_model()
+    g = t -> sin(4t) + 0.5
+    ψ0 = MPS(ComplexF64, sites, "Up")
+    channels = [(one, Hzz), (g, Hx)]
+    explicit = DrivingChannels(channels)
+    T, ns = 0.3, 4
+
+    @test fid(
+        magnus_evolve(channels, ψ0, 0.0, T; nsteps = ns),
+        magnus_evolve(explicit, ψ0, 0.0, T; nsteps = ns),
+    ) ≈ 1.0 atol = 1.0e-10
+    @test fid(
+        dyson_evolve(channels, ψ0, 0.0, T; nsteps = ns),
+        dyson_evolve(explicit, ψ0, 0.0, T; nsteps = ns),
+    ) ≈ 1.0 atol = 1.0e-10
+    @test fid(
+        cfet_evolve(channels, ψ0, 0.0, T; nsteps = ns),
+        cfet_evolve(explicit, ψ0, 0.0, T; nsteps = ns),
+    ) ≈ 1.0 atol = 1.0e-10
+    @test fid(
+        piecewise_constant_tdvp(channels, ψ0, 0.0, T; nsteps = ns),
+        piecewise_constant_tdvp(explicit, ψ0, 0.0, T; nsteps = ns),
+    ) ≈ 1.0 atol = 1.0e-10
+
+    ψ_a, hist_a = adaptive_time_evolve(channels, ψ0, 0.0, T; alg = "cfet", tol = 1.0e-4)
+    ψ_b, hist_b = adaptive_time_evolve(explicit, ψ0, 0.0, T; alg = "cfet", tol = 1.0e-4)
+    @test fid(ψ_a, ψ_b) ≈ 1.0 atol = 1.0e-10
+    @test hist_a.dts == hist_b.dts
+
+    # The `times` form (not just `t_start, t_stop`) also accepts a list.
+    grid = range(0.0, T; length = ns + 1)
+    @test fid(
+        magnus_evolve(channels, ψ0, grid),
+        magnus_evolve(explicit, ψ0, grid),
+    ) ≈ 1.0 atol = 1.0e-10
 end
 
 @testset "channels given as a plain list of tuples" begin

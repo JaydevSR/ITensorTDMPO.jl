@@ -142,3 +142,16 @@ function adaptive_time_evolve(
     end
     return ψ, (; times, dts, errors)
 end
+
+"""
+    adaptive_time_evolve([(f1, H1), (f2, H2), ...], ψ0, t_start, t_stop; kwargs...)
+
+Convenience form taking the channels as a plain list of `(driving, MPO)`
+tuples or pairs (see [`DrivingChannels`](@ref)), for calling this driver
+directly without building the `DrivingChannels` object yourself.
+"""
+function adaptive_time_evolve(
+        channels::AbstractVector, ψ0::MPS, t_start::Number, t_stop::Number; kwargs...
+    )
+    return adaptive_time_evolve(DrivingChannels(channels), ψ0, t_start, t_stop; kwargs...)
+end

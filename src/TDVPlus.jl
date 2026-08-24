@@ -1,4 +1,4 @@
-module ITensorMPSExtended
+module TDVPlus
 
 using ITensors
 using ITensorMPS: ITensorMPS, MPO, MPS, apply, expand, firstsiteinds, inner, maxlinkdim,
@@ -74,4 +74,4 @@ export
     magnus_generator,
     magnus_evolve
 
-end # module ITensorMPSExtended
+end # module TDVPlus

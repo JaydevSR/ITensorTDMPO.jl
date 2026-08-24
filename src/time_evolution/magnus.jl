@@ -201,3 +201,14 @@ function magnus_evolve(
     )
     return magnus_evolve(channels, ψ0, _time_grid(t_start, t_stop, dt, nsteps); kwargs...)
 end
+
+"""
+    magnus_evolve([(f1, H1), (f2, H2), ...], ψ0, args...; kwargs...)
+
+Convenience form taking the channels as a plain list of `(driving, MPO)`
+tuples or pairs (see [`DrivingChannels`](@ref)), for calling this driver
+directly without building the `DrivingChannels` object yourself.
+"""
+function magnus_evolve(channels::AbstractVector, ψ0::MPS, args...; kwargs...)
+    return magnus_evolve(DrivingChannels(channels), ψ0, args...; kwargs...)
+end

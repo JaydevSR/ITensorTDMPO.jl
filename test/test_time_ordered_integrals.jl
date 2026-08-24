@@ -1,4 +1,4 @@
-using ITensorMPSExtended
+using TDVPlus
 using Test
 
 @testset "cumulative_integral" begin

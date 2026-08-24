@@ -1,0 +1,34 @@
+name: Documentation
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      statuses: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1"
+      - uses: julia-actions/cache@v2
+      - name: Install dependencies
+        run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      # `docs/make.jl` builds the site on every run; the `deploydocs` call
+      # that actually publishes to `gh-pages` is commented out there until
+      # this repository has a GitHub remote to publish to. Uncomment it
+      # (filling in `repo`) once one exists — this workflow needs no
+      # further changes.
+      - name: Build and deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: julia --project=docs docs/make.jl

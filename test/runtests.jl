@@ -1,7 +1,7 @@
-using ITensorMPSExtended
+using TDVPlus
 using Test
 
-@testset "ITensorMPSExtended.jl" begin
+@testset "TDVPlus.jl" begin
     include("test_ramps.jl")
     include("test_piecewise_tdvp.jl")
     include("test_time_ordered_integrals.jl")
@@ -10,4 +10,5 @@ using Test
     include("test_time_evolve.jl")
     include("test_cfet_adaptive.jl")
     include("test_observables.jl")
+    include("test_long_range.jl")
 end
