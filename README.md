@@ -41,8 +41,11 @@ constant coefficient — `(J, H)` is shorthand for the static term `J * H`:
 ```julia
 [(1.0, Hzz), (ramp, Hx)]     # unit coupling
 [(-2.5, Hzz), (ramp, Hx)]    # any constant
-[(1.0, Hzz), (ramp, Hx)]     # equivalent to (1.0, Hzz)
+[(one, Hzz), (ramp, Hx)]     # a function works too; `one` ≡ 1.0
 ```
+
+A driving that is neither callable nor a number is rejected when the
+channels are built, rather than failing later inside the quadrature.
 
 If you want to reuse the decomposition across calls, build it explicitly
 with `DrivingChannels([(1.0, Hzz), (ramp, Hx)])` and pass that instead —
@@ -60,6 +63,22 @@ Each also has a direct driver — [`piecewise_constant_tdvp`](#piecewise-constan
 `dyson_evolve`, `magnus_evolve` — which `time_evolve` forwards to; use those
 when you want a method-specific option without going through `alg_kwargs`.
 
+### Keywords
+
+| keyword | default | meaning |
+|---|---|---|
+| `alg` | `"magnus"` | integrator; a `String`, `Symbol` or `ITensors.Algorithm` |
+| `nsteps` / `dt` | — | time grid, following `ITensorMPS.tdvp` conventions; or pass `times` directly |
+| `order` | `2` | expansion order — Magnus 1–3, Dyson `≥ 0`. Errors for `"piecewise_constant"`, which does not expand the step |
+| `cutoff` / `maxdim` | `1e-10` / `typemax(Int)` | truncation of the evolving **state** |
+| `operator_cutoff` / `operator_maxdim` | `1e-12` / `typemax(Int)` | truncation of the **operators** built along the way — `Ω`, the Dyson MPO, the frozen `H(t)` |
+| `step_observer!` | `nothing` | called as `step_observer!(; step, t_start, t_stop, state)` after each step |
+| `outputlevel` | `0` | `≥ 1` prints progress |
+| `alg_kwargs` | `(;)` | forwarded verbatim to the underlying driver (`schedule`, `eval_at`, `generator_prefactor`, `normalize`, `npoints`) |
+
+Unknown algorithm names raise an `ArgumentError` listing the valid ones
+(`EVOLUTION_ALGORITHMS`).
+
 The Dyson and Magnus drivers implement the constructions of
 [Vanthilt, Van Damme, Haegeman, McCulloch & Vanderstraeten,
 *Matrix Product Operator Encodings of the Magnus Expansion and Dyson
@@ -68,8 +87,9 @@ is and is not implemented.
 
 ### Which driver to use
 
-**Use `magnus_evolve`.** Measured infidelity against a converged reference
-for a driven TFIM chain at fixed `dt = 0.05`, order 2, versus chain length:
+**Use `alg = "magnus"`** (the default). Measured infidelity against a
+converged reference for a driven TFIM chain at fixed `dt = 0.05`, order 2,
+versus chain length:
 
 | N | `piecewise_constant_tdvp` | `dyson_evolve` | `magnus_evolve` |
 |---|---|---|---|
@@ -148,29 +168,60 @@ is the sensible default**.
 
 ## Ramps
 
-Ramp shapes map a normalized time `τ ∈ [0,1]` to a normalized progress
-`s ∈ [0,1]`, with `s(0) = 0`, `s(1) = 1`, clamped outside the window.
+A `Ramp` separates the **shape** of a sweep from its **endpoints**. A
+`RampShape` is a pure profile on the unit interval — `s: [0,1] → [0,1]`
+with `s(0) = 0` and `s(1) = 1` — and `Ramp` maps that profile onto
+physical time and physical values:
 
-| Shape | `s(τ)` |
-|---|---|
-| `LinearRamp()` | `τ` |
-| `SmoothstepRamp()` | `3τ² − 2τ³` (zero slope at ends) |
-| `SmootherstepRamp()` | `6τ⁵ − 15τ⁴ + 10τ³` (zero slope and curvature at ends) |
-| `SineRamp()` | `(1 − cos πτ)/2` |
-| `SineSquaredRamp()` | `sin²(πτ/2)` — identical to `SineRamp` by the half-angle identity |
-| `PowerLawRamp(p)` | `τᵖ` |
-| `ExponentialRamp(k)` | `(e^{kτ} − 1)/(e^k − 1)`; `k = 0` reduces to linear |
+```julia
+Ramp(shape, t_start, t_stop, value_start, value_stop)
+```
 
-`Ramp(shape, t_start, t_stop, value_start, value_stop)` turns a shape into a
-function of physical time:
+Evaluating `ramp(t)` normalizes the time, applies the profile, and
+rescales to the value range:
+
+```julia
+τ = (t - t_start) / (t_stop - t_start)         # normalized time
+s = shape(τ)                                    # normalized progress (clamped)
+value_start + (value_stop - value_start) * s    # physical value
+```
+
+Clamping happens inside the shape, so outside `[t_start, t_stop]` the ramp
+*holds* at its endpoint value rather than extrapolating — you can keep
+evolving past `t_stop` and the parameter stays put.
 
 ```julia
 ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
 ramp(0.0)   # 0.0
-ramp(5.0)   # 1.0
+ramp(5.0)   # 1.0   (midpoint of a symmetric shape)
 ramp(10.0)  # 2.0
-ramp(50.0)  # 2.0  (clamped)
+ramp(50.0)  # 2.0   (held, not extrapolated)
 ```
+
+Ramps run downward as readily as upward (`value_start > value_stop`), and
+nothing requires a `Ramp` at all — any `f(t)` is a valid driving, as is a
+plain number for a constant.
+
+### Shapes
+
+| Shape | `s(τ)` | endpoint slope |
+|---|---|---|
+| `LinearRamp()` | `τ` | **nonzero** at both ends |
+| `PowerLawRamp(p)` | `τᵖ` | zero at start for `p > 1` |
+| `ExponentialRamp(k)` | `(e^{kτ} − 1)/(e^k − 1)` | asymmetric; `k = 0` is linear |
+| `SineRamp()` | `(1 − cos πτ)/2` | zero at both ends |
+| `SineSquaredRamp()` | `sin²(πτ/2)` | identical to `SineRamp` (half-angle identity) |
+| `SmoothstepRamp()` | `3τ² − 2τ³` | zero at both ends |
+| `SmootherstepRamp()` | `6τ⁵ − 15τ⁴ + 10τ³` | zero slope **and** curvature at both ends |
+
+For adiabatic sweeps this choice is substantive. `LinearRamp` switches the
+sweep on discontinuously in `Ḣ`, and that kink is a broadband perturbation
+which drives diabatic transitions no matter how slowly you ramp. Shapes
+with `s′(0) = s′(1) = 0` turn the drive on and off smoothly and suppress
+those endpoint excitations; `SmootherstepRamp` additionally kills the
+curvature. `PowerLawRamp` and `ExponentialRamp` are the asymmetric
+options — useful when you want to move slowly through a gap minimum at one
+end only.
 
 ## Piecewise-constant TDVP
 
@@ -181,12 +232,12 @@ TDVP sweep across it.
 using ITensorMPS, ITensorMPSExtended
 
 sites = siteinds("S=1/2", 20)
-Hzz = MPO(OpSum() + ..., sites)          # static part
+Hzz = MPO(OpSum() + ..., sites)          # coupling
+Hx  = MPO(OpSum() + ..., sites)          # transverse field
 ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
-channels = DrivingChannels(Hzz => one, Hx => ramp)
 
 ψ = time_evolve(
-    channels, ψ0, 0.0, 10.0;
+    [(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
     alg = "piecewise_constant", nsteps = 200, cutoff = 1e-10, maxdim = 128,
 )
 ```
@@ -286,8 +337,11 @@ U(t, t₀) = 1 + Σₐ [fₐ] H⁽ᵃ⁾ + Σₐᵦ [fₐfᵦ] H⁽ᵃ⁾H⁽ᵇ
 ```
 
 ```julia
-U = dyson_mpo(channels, t0, t1; order = 2, cutoff = 1e-12)
+ψ = time_evolve([(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
+                alg = "dyson", order = 2, nsteps = 100)
 
+# ...or the driver directly, for independent control of each truncation
+U = dyson_mpo(channels, t0, t1; order = 2, cutoff = 1e-12)
 ψ = dyson_evolve(
     channels, ψ0, 0.0, 10.0;
     nsteps = 100, order = 2,
@@ -316,8 +370,11 @@ dense matrices.
 Orders 1–3 are supported.
 
 ```julia
-Ω = magnus_generator(channels, t0, t1; order = 2)
+ψ = time_evolve([(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
+                order = 2, nsteps = 100)     # "magnus" is the default
 
+# ...or the driver directly
+Ω = magnus_generator(channels, t0, t1; order = 2)
 ψ = magnus_evolve(
     channels, ψ0, 0.0, 10.0;
     nsteps = 100, order = 2,
@@ -389,9 +446,18 @@ you never want the thermodynamic limit.
 julia --project=. -e "using Pkg; Pkg.test()"
 ```
 
-The suite checks the expansions against independent dense-matrix reference
-evolution on small chains: the reduction to the Taylor series for constant
-driving, anti-Hermiticity of `Ω`, the equivalence of first-order Dyson and
-first-order Magnus noted in the paper, the expected convergence order under
-step refinement, and that both expansions beat freezing the Hamiltonian for
-a rapidly oscillating drive.
+209 tests. The expansions are checked against **independent dense-matrix**
+reference evolution on small chains, rather than against each other: the
+reduction to the Taylor series for constant driving, anti-Hermiticity of
+`Ω`, the equivalence of first-order Dyson and first-order Magnus noted in
+the paper, the expected convergence order under step refinement, and that
+both expansions beat freezing the Hamiltonian for a rapidly oscillating
+drive. Also covered: QN-conserving (`conserve_qns = true`) evolution with
+flux preservation, the time-ordered-integral closed forms and the
+factoring property, and that every `time_evolve` algorithm reproduces its
+direct driver exactly.
+
+Note that these drivers do not renormalize, so the state norm drifts by
+~1e-11 under truncation. Compare states with a normalized overlap
+`abs(inner(a, b)) / (norm(a) * norm(b))`, not with `abs(inner(a, b))`
+against 1.
