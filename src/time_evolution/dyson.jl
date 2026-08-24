@@ -11,7 +11,8 @@ function dyson_terms(
         order::Integer,
         cutoff = 1.0e-12,
         maxdim = typemax(Int),
-        npoints::Integer = 1025
+        npoints::Integer = 1025,
+        prefactor = -im
     )
     order >= 0 || throw(ArgumentError("`order` must be non-negative, got $order."))
     nc = nchannels(channels)
@@ -35,7 +36,7 @@ function dyson_terms(
         end
         for (combo, P) in partials
             coeff = time_ordered_integral(
-                [channels.drivings[a] for a in combo], t0, t; npoints
+                [channels.drivings[a] for a in combo], t0, t; npoints, prefactor
             )
             iszero(coeff) && continue
             push!(terms, coeff * P)
@@ -94,9 +95,10 @@ function dyson_mpo(
         order::Integer = 2,
         cutoff = 1.0e-12,
         maxdim = typemax(Int),
-        npoints::Integer = 1025
+        npoints::Integer = 1025,
+        prefactor = -im
     )
-    terms = dyson_terms(channels, t0, t; order, cutoff, maxdim, npoints)
+    terms = dyson_terms(channels, t0, t; order, cutoff, maxdim, npoints, prefactor)
     length(terms) == 1 && return only(terms)
     return sum(terms; cutoff, maxdim)
 end

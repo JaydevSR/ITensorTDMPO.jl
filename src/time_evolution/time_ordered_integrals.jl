@@ -74,6 +74,11 @@ uniform grid of `npoints` points, which costs `O(n · npoints)` rather than
 the `O(npoints^n)` of naive nested quadrature. `npoints` is rounded up to
 an odd number. Two work buffers are allocated per call regardless of `n`.
 
+`prefactor` is the factor carried per order, `-im` for real-time
+evolution. Pass `-1` for imaginary time, which turns the bracket into
+`(-1)^n ∫⋯` and makes the resulting generator Hermitian rather than
+anti-Hermitian.
+
 # Examples
 
 For a constant driving function `f ≡ 1`, the bracket reduces to the
@@ -83,7 +88,7 @@ Taylor coefficient `(-i)ⁿ (t - t₀)ⁿ / n!`:
 time_ordered_integral((one, one), 0.0, 1.0)  # ≈ -0.5
 ```
 """
-function time_ordered_integral(fs, t0, t; npoints::Integer = 1025)
+function time_ordered_integral(fs, t0, t; npoints::Integer = 1025, prefactor = -im)
     n = length(fs)
     n == 0 && return one(ComplexF64)
     npoints = max(3, isodd(npoints) ? npoints : npoints + 1)
@@ -98,5 +103,5 @@ function time_ordered_integral(fs, t0, t; npoints::Integer = 1025)
         _sample_scaled!(y, fs[k], grid, g)
         cumulative_integral!(g, y, h)
     end
-    return (-im)^n * g[end]
+    return prefactor^n * g[end]
 end

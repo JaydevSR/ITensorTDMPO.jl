@@ -8,4 +8,6 @@ using Test
     include("test_driving_channels.jl")
     include("test_dyson_magnus.jl")
     include("test_time_evolve.jl")
+    include("test_cfet_adaptive.jl")
+    include("test_observables.jl")
 end

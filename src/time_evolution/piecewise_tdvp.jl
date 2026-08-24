@@ -83,6 +83,7 @@ function piecewise_constant_tdvp(
         generator_prefactor = -im,
         tdvp_kwargs = (;),
         combine_kwargs = (; alg = "directsum"),
+        normalize::Bool = false,
         (step_observer!) = nothing,
         outputlevel = 0
     )
@@ -105,6 +106,7 @@ function piecewise_constant_tdvp(
             H, generator_prefactor * dt, ψ;
             nsite = step_spec.nsite, time_start = t_start, tdvp_kwargs...
         )
+        normalize && LinearAlgebra.normalize!(ψ)
         if !isnothing(step_observer!)
             step_observer!(; step, t_start, t_stop, state = ψ)
         end

@@ -1,9 +1,9 @@
 module ITensorMPSExtended
 
 using ITensors
-using ITensorMPS: ITensorMPS, MPO, MPS, apply, expand, firstsiteinds, maxlinkdim, siteinds,
-    tdvp
-using LinearAlgebra: LinearAlgebra
+using ITensorMPS: ITensorMPS, MPO, MPS, apply, expand, firstsiteinds, inner, maxlinkdim,
+    siteinds, tdvp
+using LinearAlgebra: LinearAlgebra, norm
 
 include("time_evolution/ramps.jl")
 include("time_evolution/driven_hamiltonian.jl")
@@ -15,11 +15,33 @@ include("time_evolution/driving_channels.jl")
 include("time_evolution/piecewise_tdvp.jl")
 include("time_evolution/dyson.jl")
 include("time_evolution/magnus.jl")
+include("time_evolution/cfet.jl")
 include("time_evolution/time_evolve.jl")
+include("time_evolution/adaptive.jl")
+include("observables/measures.jl")
+include("observables/observer.jl")
 
 export
     # Unified entry point
     time_evolve,
+    EVOLUTION_ALGORITHMS,
+    # Adaptive stepping
+    adaptive_time_evolve,
+    trace_distance,
+    # Commutator-free propagator
+    cfet_evolve,
+    cfet_exponents,
+    # Observables and diagnostics
+    EvolutionObserver,
+    observe!,
+    results,
+    entanglement_entropy,
+    entanglement_profile,
+    instantaneous_energy,
+    energy_variance,
+    instantaneous_spectrum,
+    instantaneous_gap,
+    adiabatic_report,
     # Ramp shapes and ramps
     RampShape,
     LinearRamp,

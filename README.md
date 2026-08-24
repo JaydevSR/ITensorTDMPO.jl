@@ -57,7 +57,14 @@ Three algorithms are available, in increasing order of sophistication:
 |---|---|---|---|
 | `"piecewise_constant"` | frozen at one evaluation point | 2 | yes (TDVP) |
 | `"dyson"` | expanded to order `N` in the Dyson series | `N` | approximately |
-| `"magnus"` *(default)* | expanded to order `N` in the Magnus expansion | ~4 | yes |
+| `"magnus"` *(default)* | `Ω₁ + Ω₂` (+`Ω₃`), applies `exp(Ω)` | ~4 | yes |
+| `"cfet"` | product of exponentials at Gauss nodes — **no commutators** | 4 | yes |
+
+**`"cfet"` measured strictly better than `"magnus"`** — roughly 2× faster
+*and* ~1.5× more accurate at equal step count (see
+[Commutator-free propagator](#commutator-free-propagator-cfet)). It is not
+the default only because `"magnus"` was there first; switching is a
+one-word change.
 
 Each also has a direct driver — [`piecewise_constant_tdvp`](#piecewise-constant-tdvp),
 `dyson_evolve`, `magnus_evolve` — which `time_evolve` forwards to; use those
@@ -72,6 +79,10 @@ when you want a method-specific option without going through `alg_kwargs`.
 | `order` | `2` | expansion order — Magnus 1–3, Dyson `≥ 0`. Errors for `"piecewise_constant"`, which does not expand the step |
 | `cutoff` / `maxdim` | `1e-10` / `typemax(Int)` | truncation of the evolving **state** |
 | `operator_cutoff` / `operator_maxdim` | `1e-12` / `typemax(Int)` | truncation of the **operators** built along the way — `Ω`, the Dyson MPO, the frozen `H(t)` |
+| `generator_prefactor` | `-im` | `-im` for real time, `-1` for imaginary time |
+| `normalize` | per-algorithm | renormalize after each step; needed for imaginary time |
+| `adaptive` | `false` | choose step sizes automatically to meet `tol` |
+| `tol` | `1e-6` | target local error per step when `adaptive = true` |
 | `step_observer!` | `nothing` | called as `step_observer!(; step, t_start, t_stop, state)` after each step |
 | `outputlevel` | `0` | `≥ 1` prints progress |
 | `alg_kwargs` | `(;)` | forwarded verbatim to the underlying driver (`schedule`, `eval_at`, `generator_prefactor`, `normalize`, `npoints`) |
@@ -163,6 +174,164 @@ Note that order 3 was not better than order 2 in this test: both converge
 at fourth order, and order 3 costs more per step. `Ω₁ + Ω₂` with exact
 time-ordered integrals is already a fourth-order integrator, so **order 2
 is the sensible default**.
+
+Reaching sixth order would require `Ω₄`. An implementation of it measured
+~3.7th order rather than the expected 6th — the nested-commutator basis
+was wrong or incomplete — and was **removed rather than shipped
+unverified**. `Ω₃` is retained but is not recommended. For higher order,
+[`"cfet"`](#commutator-free-propagator-cfet) is both the cheaper and the
+more extensible route, since commutator-free schemes are specified by
+coefficient tables rather than commutator algebra.
+
+---
+
+## Commutator-free propagator (CFET)
+
+`alg = "cfet"` writes each step as a product of exponentials of *plain
+weighted sums* of the channel operators, evaluated at Gauss–Legendre
+nodes:
+
+```
+U(t+h, t) ≈ exp(-i h W₂) exp(-i h W₁),   Wⱼ = Σₐ wⱼₐ H⁽ᵃ⁾
+```
+
+It reaches fourth order **without ever forming a commutator**. Since
+commutators are what inflate MPO bond dimension in the Magnus route, each
+generator here is no larger than `H(t)` itself — the cost is two TDVP
+applications per step instead of one, which turns out to be a bargain:
+
+| steps | `"magnus"` order 2 | `"cfet"` order 4 |
+|---|---|---|
+| 8 | 7.45 s, err 5.6e-4 | **4.13 s, err 3.8e-4** |
+| 16 | 14.95 s, err 3.7e-5 | **7.16 s, err 2.4e-5** |
+| 32 | 29.00 s, err 2.5e-6 | **12.44 s, err 1.7e-6** |
+
+Measured convergence order 3.97 / 3.99 / 3.86 against an exact dense
+reference. `order = 2` degenerates to the exponential midpoint rule and
+reproduces `"piecewise_constant"` exactly (measured order 2.00), which is
+a useful cross-check that the two share a limit.
+
+!!! warning "A floor, not unbounded convergence"
+    Refining the step count only helps up to a point. Each step still
+    runs through TDVP, and — as documented under
+    [Which driver to use](#which-driver-to-use) — a fixed generator
+    exponentiated by 2-site TDVP has its own roundoff floor: accuracy
+    improves for the first few sweeps, then *degrades* as more, smaller
+    sweeps accumulate per-application roundoff. For the benchmark model
+    here that floor sits around `nsteps ≈ 16`; refining well past it can
+    make CFET (or Magnus) *less* accurate, not more. Consequently, do not
+    validate a fine-step run against the same method at an even finer
+    step count as "ground truth" — it can itself be sitting on that floor,
+    which silently invalidates the comparison. The test suite learned
+    this the hard way and now checks against an independent dense RK4
+    reference instead.
+
+```julia
+ψ = time_evolve(channels, ψ0, 0.0, 10.0; alg = "cfet", nsteps = 100)
+```
+
+## Adaptive stepping
+
+Set an accuracy instead of a step count:
+
+```julia
+ψ = time_evolve(channels, ψ0, 0.0, 10.0; alg = "cfet", adaptive = true, tol = 1e-7)
+
+# adaptive_time_evolve also returns the step history
+ψ, hist = adaptive_time_evolve(channels, ψ0, 0.0, 10.0; alg = "cfet", tol = 1e-7)
+hist.dts, hist.errors      # where the stepper had to slow down
+```
+
+Each candidate step is taken once at `dt` and again as two steps of
+`dt/2`; the [`trace_distance`](@ref) between the results estimates the
+local error, the step is accepted when that is below `tol`, and the next
+step size is scaled by `(tol/err)^(1/p)`. This costs three sub-steps per
+accepted step, so it pays off when `‖Ḣ‖` varies strongly across the
+evolution — a ramp that must crawl through a gap minimum and can sprint
+elsewhere — and not for a uniform drive.
+
+!!! warning "`tol` has a floor too"
+    Step-doubling assumes the per-step integrator is otherwise exact, so
+    that shrinking the step always shrinks the error. TDVP is not exact:
+    push `tol` far enough below its own per-application roundoff and the
+    coarse/fine comparison stops measuring the integration error at all —
+    it measures roundoff noise instead. Measured on the benchmark model
+    above, the true error (against an independent reference) is minimized
+    around `tol ≈ 1e-7` and *increases* for `tol = 1e-8, 1e-9, 1e-10`,
+    even though the stepper dutifully takes more steps each time:
+
+    | `tol` | true error | steps |
+    |---|---|---|
+    | 1e-5 | 7.4e-7 | 6 |
+    | 1e-6 | 3.8e-7 | 8 |
+    | **1e-7** | **3.4e-7 (best)** | 12 |
+    | 1e-8 | 8.7e-7 | 21 |
+    | 1e-10 | 1.3e-6 | 34 |
+
+    A telltale sign you've crossed this floor: the recorded step errors in
+    `hist.errors` start reading exactly `0.0`. Keep `tol` at or above
+    roughly the state/operator `cutoff` in use, not many orders tighter.
+
+## Imaginary time
+
+Pass `generator_prefactor = -1` (with `normalize = true`, since the
+evolution is no longer unitary) to project toward the ground state:
+
+```julia
+ψ = time_evolve(channels, ψ0, 0.0, 6.0;
+                alg = "cfet", nsteps = 60,
+                generator_prefactor = -1, normalize = true)
+```
+
+This works for every algorithm: the factor is carried by the time-ordered
+integrals for Magnus and Dyson, and applied directly to each exponent for
+CFET and the piecewise-constant driver.
+
+## Observables
+
+`EvolutionObserver` collects measurements along the evolution and is
+itself the `step_observer!` callback:
+
+```julia
+obs = EvolutionObserver(
+    :chi      => maxlinkdim,
+    :entropy  => ψ -> entanglement_entropy(ψ),
+    :energy   => (ψ, t) -> instantaneous_energy(channels, t, ψ),
+)
+
+observe!(obs, ψ0, 0.0)                     # optional: record the initial state
+ψ = time_evolve(channels, ψ0, 0.0, 10.0; nsteps = 100, step_observer! = obs)
+
+r = results(obs)                            # (; step, time, chi, entropy, energy)
+```
+
+Each measurement is called as `f(state)` or, if it accepts two arguments,
+`f(state, t)`. Element types are narrowed, so `r.entropy` is a
+`Vector{Float64}`. Pass `every = k` to record only every `k`-th step —
+use this for diagnostics that cost more than the evolution itself.
+
+## Adiabaticity diagnostics
+
+Everything here is **opt-in**: no driver computes a diagnostic unless you
+put it in an observer.
+
+| function | cost | what it tells you |
+|---|---|---|
+| `instantaneous_energy(ch, t, ψ)` | one MPO application | `⟨H(t)⟩` |
+| `energy_variance(ch, t, ψ)` | one MPO application | `⟨H²⟩ − ⟨H⟩²`, zero on an eigenstate |
+| `entanglement_entropy(ψ, b)` | one SVD | von Neumann entropy across bond `b` |
+| `instantaneous_gap(ch, t, ψ)` | **DMRG solve** | `E₁(t) − E₀(t)` |
+| `adiabatic_report(ch, t, ψ)` | cheap by default | bundle; `gap = true` adds DMRG |
+
+**Energy variance is the cheap adiabaticity check.** It vanishes exactly
+when the state is an instantaneous eigenstate, needs no ground-state
+solve, and never forms `H²` (it is computed from `H|ψ⟩`). Use it every
+step; reserve the DMRG-based gap for a sparse subset via `every = k`.
+
+```julia
+adiabatic_report(ch, t, ψ)              # energy + variance, no DMRG
+adiabatic_report(ch, t, ψ; gap = true)  # adds gap, excess energy, GS fidelity
+```
 
 ---
 
@@ -367,7 +536,9 @@ dense matrices.
 Ω₃ = ⅙ Σₐᵦ𝚌 [fₐfᵦf𝚌] ( [[H⁽ᵃ⁾,H⁽ᵇ⁾],H⁽ᶜ⁾] + [H⁽ᵃ⁾,[H⁽ᵇ⁾,H⁽ᶜ⁾]] )
 ```
 
-Orders 1–3 are supported.
+Orders 1–3 are supported; **order 2 is the right choice** (order 3
+converges no faster and costs more). See the note above on why `Ω₄` is
+absent.
 
 ```julia
 ψ = time_evolve([(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
@@ -446,7 +617,7 @@ you never want the thermodynamic limit.
 julia --project=. -e "using Pkg; Pkg.test()"
 ```
 
-209 tests. The expansions are checked against **independent dense-matrix**
+The expansions are checked against **independent dense-matrix**
 reference evolution on small chains, rather than against each other: the
 reduction to the Taylor series for constant driving, anti-Hermiticity of
 `Ω`, the equivalence of first-order Dyson and first-order Magnus noted in
@@ -454,8 +625,12 @@ the paper, the expected convergence order under step refinement, and that
 both expansions beat freezing the Hamiltonian for a rapidly oscillating
 drive. Also covered: QN-conserving (`conserve_qns = true`) evolution with
 flux preservation, the time-ordered-integral closed forms and the
-factoring property, and that every `time_evolve` algorithm reproduces its
-direct driver exactly.
+factoring property, that every `time_evolve` algorithm reproduces its
+direct driver exactly, the CFET weights and its fourth-order convergence,
+adaptive stepping against its own tolerance, imaginary time converging to
+the DMRG ground-state energy, and the observable/diagnostic layer
+(entropy of a Bell pair, zero variance on an eigenstate, gap against a
+direct DMRG solve).
 
 Note that these drivers do not renormalize, so the state norm drifts by
 ~1e-11 under truncation. Compare states with a normalized overlap

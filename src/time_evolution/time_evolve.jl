@@ -8,7 +8,7 @@ default_operator_cutoff() = 1.0e-12
 
 The algorithm names accepted by [`time_evolve`](@ref).
 """
-const EVOLUTION_ALGORITHMS = ("magnus", "piecewise_constant", "dyson")
+const EVOLUTION_ALGORITHMS = ("magnus", "cfet", "piecewise_constant", "dyson")
 
 _algorithm(alg::Algorithm) = alg
 _algorithm(alg::AbstractString) = Algorithm(String(alg))
@@ -112,8 +112,14 @@ end
 
 function time_evolve(
         channels::DrivingChannels, ψ0::MPS, t_start::Number, t_stop::Number;
-        dt = nothing, nsteps = nothing, kwargs...
+        dt = nothing, nsteps = nothing, adaptive::Bool = false, kwargs...
     )
+    if adaptive
+        state, _ = adaptive_time_evolve(
+            channels, ψ0, t_start, t_stop; dt_init = dt, kwargs...
+        )
+        return state
+    end
     return time_evolve(channels, ψ0, _time_grid(t_start, t_stop, dt, nsteps); kwargs...)
 end
 
@@ -131,19 +137,21 @@ function time_evolve(
         order = nothing,
         cutoff = default_state_cutoff(), maxdim = typemax(Int),
         operator_cutoff = default_operator_cutoff(), operator_maxdim = typemax(Int),
+        generator_prefactor = -im, normalize = nothing,
         (step_observer!) = nothing, outputlevel = 0, alg_kwargs = (;)
     )
     if !isnothing(order)
         throw(
             ArgumentError(
-                "`order` is not meaningful for `alg = \"piecewise_constant\"`, which freezes `H(t)` on each interval rather than expanding it. Use `alg = \"magnus\"` or `alg = \"dyson\"` to choose an expansion order."
+                "`order` is not meaningful for `alg = \"piecewise_constant\"`, which freezes `H(t)` on each interval rather than expanding it. Use `alg = \"magnus\"`, `\"cfet\"` or `\"dyson\"` to choose an expansion order."
             )
         )
     end
     return piecewise_constant_tdvp(
         channels, ψ0, times;
-        operator_cutoff, operator_maxdim,
+        operator_cutoff, operator_maxdim, generator_prefactor,
         tdvp_kwargs = (; cutoff, maxdim),
+        normalize = something(normalize, false),
         step_observer!, outputlevel, alg_kwargs...
     )
 end
@@ -153,13 +161,36 @@ function time_evolve(
         order = 2,
         cutoff = default_state_cutoff(), maxdim = typemax(Int),
         operator_cutoff = default_operator_cutoff(), operator_maxdim = typemax(Int),
+        generator_prefactor = -im, normalize = nothing,
         (step_observer!) = nothing, outputlevel = 0, alg_kwargs = (;)
     )
     return magnus_evolve(
         channels, ψ0, times;
         order,
-        generator_kwargs = (; cutoff = operator_cutoff, maxdim = operator_maxdim),
+        generator_kwargs = (;
+            cutoff = operator_cutoff, maxdim = operator_maxdim,
+            prefactor = generator_prefactor,
+        ),
         tdvp_kwargs = (; cutoff, maxdim),
+        normalize = something(normalize, false),
+        step_observer!, outputlevel, alg_kwargs...
+    )
+end
+
+function time_evolve(
+        ::Algorithm"cfet", channels::DrivingChannels, ψ0::MPS, times;
+        order = 4,
+        cutoff = default_state_cutoff(), maxdim = typemax(Int),
+        operator_cutoff = default_operator_cutoff(), operator_maxdim = typemax(Int),
+        generator_prefactor = -im, normalize = nothing,
+        (step_observer!) = nothing, outputlevel = 0, alg_kwargs = (;)
+    )
+    return cfet_evolve(
+        channels, ψ0, times;
+        order, generator_prefactor,
+        operator_kwargs = (; cutoff = operator_cutoff, maxdim = operator_maxdim),
+        tdvp_kwargs = (; cutoff, maxdim),
+        normalize = something(normalize, false),
         step_observer!, outputlevel, alg_kwargs...
     )
 end
@@ -169,13 +200,18 @@ function time_evolve(
         order = 2,
         cutoff = default_state_cutoff(), maxdim = typemax(Int),
         operator_cutoff = default_operator_cutoff(), operator_maxdim = typemax(Int),
+        generator_prefactor = -im, normalize = nothing,
         (step_observer!) = nothing, outputlevel = 0, alg_kwargs = (;)
     )
     return dyson_evolve(
         channels, ψ0, times;
         order,
-        mpo_kwargs = (; cutoff = operator_cutoff, maxdim = operator_maxdim),
+        mpo_kwargs = (;
+            cutoff = operator_cutoff, maxdim = operator_maxdim,
+            prefactor = generator_prefactor,
+        ),
         apply_kwargs = (; cutoff, maxdim),
+        normalize = something(normalize, true),
         step_observer!, outputlevel, alg_kwargs...
     )
 end
