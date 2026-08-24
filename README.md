@@ -266,11 +266,21 @@ The practical consequences:
 - **Cost is exponential in the order.** The order-`N` Dyson MPO enumerates
   `nchannels^N` operator strings. Fine for `order ≤ 3` and a few channels.
 
+Note that size-extensivity is **not** an infinite-system concern only. The
+paper applies its encoding to finite systems too (Sec. VIII A benchmarks a
+finite L = 8 chain at exact bond dimension and recovers clean `O(dtᴺ)`
+convergence). On an infinite system non-extensivity is *fatal* — applying
+`Hⁿ` to a normalized uMPS gives a state that cannot be normalized. On a
+finite system it is merely *harmful*: everything is well defined, but the
+accuracy degrades with chain length, which is exactly the `N^4.7` growth
+measured above.
+
 ITensors builds MPOs from `OpSum` with automatic compression and does not
 expose the Jordan-block/first-degree structure that the paper's algorithms
 operate on, so implementing the full encoding would mean building that layer
-from scratch. That is the natural next step if the bond dimension or the
-thermodynamic limit becomes the binding constraint.
+from scratch. That is the natural next step, and it would fix the Dyson
+driver's chain-length scaling on finite systems — it is worth doing even if
+you never want the thermodynamic limit.
 
 ## Testing
 

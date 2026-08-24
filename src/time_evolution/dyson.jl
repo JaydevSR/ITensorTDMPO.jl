@@ -64,13 +64,19 @@ where `[f_{a₁} ⋯ f_{aₙ}]` are the time-ordered integrals of
 operator strings are built by direct MPO multiplication and the series is
 summed with truncation.
 
-!!! note "Scope"
-    This is the *direct* finite-system construction: operator strings are
-    formed as explicit MPO products. It reproduces the Dyson series of the
-    paper term by term, but not the paper's size-extensive
-    finite-state-machine encoding, which keeps the bond dimension low and
-    is what makes the construction usable in the thermodynamic limit. See
-    the README for details.
+!!! warning "Scope and accuracy"
+    This is the *direct* construction: operator strings are formed as
+    explicit MPO products. It reproduces the Dyson series of the paper
+    term by term, but not the paper's size-extensive finite-state-machine
+    encoding, which keeps the bond dimension low and makes the accuracy
+    independent of chain length — on finite systems as well as in the
+    thermodynamic limit.
+
+    As a result the error here grows steeply with system size, and
+    [`dyson_evolve`](@ref) is already less accurate than freezing the
+    Hamiltonian by a chain length of about 4 sites. Prefer
+    [`magnus_evolve`](@ref), whose exponentiation resums the disjoint
+    contributions for free. See the README for measured numbers.
 
 # Keywords
 
