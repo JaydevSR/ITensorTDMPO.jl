@@ -73,6 +73,21 @@ exact dense RK4 reference:
 | `magnus_evolve` order 2 | **~3.9** | ~2.1× |
 | `magnus_evolve` order 3 | ~3.8 | ~2.6× |
 
+To be precise about where these orders come from: TDVP is *not* the
+limiting factor in either. Two-site TDVP applied to a time-independent
+generator at exact bond dimension is accurate to ~1e-7 within a few
+sweeps — it acts as an essentially exact exponentiator. The second order
+of `piecewise_constant_tdvp` is entirely the *Hamiltonian-freezing*
+error: switching `eval_at` from `:midpoint` to `:start` drops the method
+to first order (measured ratios 1.99 vs 4.00), with everything else
+unchanged. So the comparison above is really midpoint freezing (2nd
+order) versus `Ω₁ + Ω₂` with exact time-ordered integrals (4th order),
+both exponentiated by the same near-exact TDVP.
+
+With truncation, TDVP additionally contributes a projection error, but
+that is controlled by bond dimension rather than by `dt` and so does not
+change these orders.
+
 Magnus costs about twice as much per step but converges at roughly fourth
 order rather than second, so the equal-accuracy speedup *grows* as the
 tolerance tightens:
@@ -157,6 +172,14 @@ schedule = (t, ψ) -> maxlinkdim(ψ) < 128 ?
     TDVPStepSpec(; nsite = 1, expand_krylov = true,
                    expand_kwargs = (; krylovdim = 2, cutoff = 1e-8))
 ```
+
+!!! warning
+    Never select `nsite = 1` without `expand_krylov = true` when the state
+    cannot already represent the target entanglement. One-site TDVP cannot
+    grow the bond dimension, so starting from a product state it stays at
+    bond dimension 1 and the result is simply wrong — measured error 0.82
+    (trace distance), *independent of step count*, on a case where two-site
+    TDVP reaches 1e-7. The default schedule uses `nsite = 2`.
 
 Other keywords: `eval_at` (`:midpoint` or `:start`), `combine_kwargs`,
 `step_observer!(; step, t_start, t_stop, state)`, `outputlevel`. An explicit
