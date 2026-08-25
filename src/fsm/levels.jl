@@ -8,15 +8,26 @@ notation of [Vanthilt et al.](https://arxiv.org/abs/2605.21597).
 `3` (a term has finished). `channel` records the driving-channel
 subscript `a` of the `2ₐ`/`3ₐ` levels introduced by the rewiring of
 Eq. (63); it is `0` for `kind == 1`, which carries no subscript.
+
+`slot` distinguishes the individual states *within* a channel's
+in-progress block, which has dimension `χ` and so is generally more than
+one level. The paper writes them all as `2ₐ`, but they are not
+interchangeable: for a hopping term the block's two states are the `S+`
+and `S-` branches, carrying opposite flux. Without `slot` the
+equivalent-column compression would merge them and silently produce the
+wrong operator. It is `0` for `kind != 2`.
 """
 struct LevelTag
     kind::Int8
     channel::Int8
+    slot::Int16
 end
 
-LevelTag(kind::Integer, channel::Integer) = LevelTag(Int8(kind), Int8(channel))
+function LevelTag(kind::Integer, channel::Integer, slot::Integer = 0)
+    return LevelTag(Int8(kind), Int8(channel), Int16(slot))
+end
 
-const LEVEL_ONE = LevelTag(1, 0)
+const LEVEL_ONE = LevelTag(1, 0, 0)
 
 """
     Level
@@ -73,7 +84,9 @@ is_start(l::Level) = all(t -> t.kind == 1, l)
 
 function Base.show(io::IO, t::LevelTag)
     print(io, t.kind)
-    return t.kind == 1 || print(io, "_", t.channel)
+    t.kind == 1 && return
+    print(io, "_", t.channel)
+    return t.kind == 2 && print(io, "[", t.slot, "]")
 end
 
 show_level(l::Level) = "(" * join(string.(l), " ") * ")"

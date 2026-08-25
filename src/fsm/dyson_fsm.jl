@@ -34,7 +34,15 @@ function concat_product(B1::BlockMPO, B2::BlockMPO)
         end
     end
 
-    return BlockMPO(B1.sites, W, levels, idx(B1.vL, B2.vL), idx(B1.vR, B2.vR))
+    # Flux is additive under the operator product, so a composite level
+    # sits in the sum of its factors' sectors.
+    qns = if hasqns(B1) && hasqns(B2)
+        [B1.qns[i] + B2.qns[j] for i in 1:virtualdim(B1) for j in 1:d2]
+    else
+        nothing
+    end
+
+    return BlockMPO(B1.sites, W, levels, qns, idx(B1.vL, B2.vL), idx(B1.vR, B2.vR))
 end
 
 """
@@ -74,8 +82,11 @@ function rewire(channels::DrivingChannels)
     three_index = [off + a for a in 1:nc]
 
     levels = Level[[LEVEL_ONE]]
-    for a in 1:nc, _ in 1:chis[a]
-        push!(levels, [LevelTag(2, a)])
+    # `slot` runs over the states inside channel `a`'s block, in the same
+    # order `remap` places them, so the labels stay in step with the
+    # virtual indices they name.
+    for a in 1:nc, i in 1:chis[a]
+        push!(levels, [LevelTag(2, a, i)])
     end
     for a in 1:nc
         push!(levels, [LevelTag(3, a)])
@@ -102,7 +113,20 @@ function rewire(channels::DrivingChannels)
         end
     end
 
-    return BlockMPO(first(blocks).sites, W, levels)
+    qns = if all(hasqns, blocks)
+        q = [blocks[1].qns[1]]                       # the shared level (1)
+        for a in 1:nc, i in 2:(virtualdim(blocks[a]) - 1)
+            push!(q, blocks[a].qns[i])               # each channel's 2-block
+        end
+        for a in 1:nc
+            push!(q, blocks[a].qns[end])             # each channel's 3ₐ
+        end
+        q
+    else
+        nothing
+    end
+
+    return BlockMPO(first(blocks).sites, W, levels, qns)
 end
 
 """
@@ -171,7 +195,7 @@ function dyson_block_mpo(
 
     # Rerouting moved the exit onto level (1): the operator now both
     # enters and leaves there, which is what makes it extensive.
-    O = BlockMPO(O.sites, O.W, O.levels, O.vL, O.vL)
+    O = BlockMPO(O.sites, O.W, O.levels, O.qns, O.vL, O.vL)
     O = _drop_levels(O, removable)
     # Exact, so it is on by default: it changes the bond dimension and
     # nothing else.
@@ -194,7 +218,8 @@ function _drop_levels(B::BlockMPO, drop)
 
     (haskey(renumber, B.vL) && haskey(renumber, B.vR)) ||
         throw(ArgumentError("a boundary level was dropped; this is a bug in the caller."))
-    return BlockMPO(B.sites, W, B.levels[keep], renumber[B.vL], renumber[B.vR])
+    qns = hasqns(B) ? B.qns[keep] : nothing
+    return BlockMPO(B.sites, W, B.levels[keep], qns, renumber[B.vL], renumber[B.vR])
 end
 
 """

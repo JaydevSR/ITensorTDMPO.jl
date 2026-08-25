@@ -180,6 +180,71 @@ end
     @test direct[2] > 50 * fsm[2]
 end
 
+@testset "compression handles a chi > 1 block" begin
+    # Regression: `Level` originally labelled every state of a channel's
+    # in-progress block as plain `2_a`, so the column compression merged
+    # states that are not interchangeable. Every chi <= 1 model misses
+    # this; XXZ has chi = 3 and catches it.
+    n = FSM_N
+    sites = siteinds("S=1/2", n)
+    xxz = OpSum()
+    for j in 1:(n - 1)
+        xxz += 0.5, "S+", j, "S-", j + 1
+        xxz += 0.5, "S-", j, "S+", j + 1
+        xxz += 1.0, "Sz", j, "Sz", j + 1
+    end
+    Hxxz = MPO(xxz, sites)
+
+    # Merging states that are not interchangeable changes the operator,
+    # so comparing the compressed build against the uncompressed one is
+    # the sharp test -- and needs no tolerance on the physics.
+    for order in 1:2
+        ch = DrivingChannels([(1.0, Hxxz)])
+        raw = dyson_block_mpo(ch, 0.0, 0.02; order, compress = false)
+        small = compress_columns(raw)
+        @test virtualdim(small) <= virtualdim(raw)
+
+        A1 = dense_matrix(to_mpo(raw), sites)
+        A2 = dense_matrix(to_mpo(small), sites)
+        @test norm(A1 - A2) / norm(A1) < 1.0e-12
+    end
+end
+
+@testset "Dyson FSM conserves quantum numbers" begin
+    n = FSM_N
+    sites = siteinds("S=1/2", n; conserve_qns = true)
+    zz = OpSum()
+    for j in 1:(n - 1)
+        zz += 1.0, "Sz", j, "Sz", j + 1
+    end
+    hop = OpSum()
+    for j in 1:(n - 1)
+        hop += 0.5, "S+", j, "S-", j + 1
+        hop += 0.5, "S-", j, "S+", j + 1
+    end
+    Hzz, Hhop = MPO(zz, sites), MPO(hop, sites)
+
+    # The block structure survives extraction and reconstruction. Checked
+    # through the action on a state, since a QN MPO cannot be densified
+    # as cheaply as a plain one.
+    psi = random_mps(sites, j -> isodd(j) ? "Up" : "Dn"; linkdims = 4)
+    for H in (Hzz, Hhop)
+        B = block_mpo(H)
+        @test !isnothing(B.qns)
+        a = apply(H, psi; cutoff = 1.0e-14)
+        b = apply(to_mpo(B), psi; cutoff = 1.0e-14)
+        @test norm(a - b) / norm(a) < 1.0e-12
+    end
+
+    psi0 = MPS(sites, j -> isodd(j) ? "Up" : "Dn")
+    ch = DrivingChannels([(1.0, Hzz), (t -> cos(2.0t), Hhop)])
+    for order in 1:2
+        evolved = apply(dyson_mpo_fsm(ch, 0.0, 0.05; order), psi0; cutoff = 1.0e-12)
+        @test flux(evolved) == flux(psi0)
+        @test isapprox(norm(evolved), 1.0; atol = 1.0e-2)
+    end
+end
+
 @testset "Dyson FSM matches a time-dependent reference" begin
     sites, Hzz, Hx = _fsm_model()
     f1 = t -> 1.0

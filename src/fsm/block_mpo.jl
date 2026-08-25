@@ -27,20 +27,35 @@ They are not always the two ends: the Dyson construction reroutes every
 finished level back into level `(1)`, so its output both enters *and*
 exits at index `1`, and reading it off at index `end` would silently give
 the wrong operator.
+
+`qns` carries the quantum number of each virtual level for a
+QN-conserving MPO, and is `nothing` otherwise. It has to be tracked
+explicitly because the levels are rebuilt from scratch by
+[`to_mpo`](@ref), and a link index cannot be reconstructed without
+knowing which symmetry sector each level sits in. The invariant is that
+the operator at `(r, c)` carries flux `qns[r] - qns[c]`.
 """
 struct BlockMPO{S <: Index}
     sites::Vector{S}
     W::Vector{Dict{Tuple{Int, Int}, ITensor}}
     levels::Vector{Level}
+    qns::Union{Nothing, Vector{QN}}
     vL::Int
     vR::Int
 end
 
 # A first-degree MPO runs from the level where nothing has started to the
 # level where everything has finished.
-function BlockMPO(sites, W, levels)
-    return BlockMPO(sites, W, levels, 1, length(levels))
+function BlockMPO(sites, W, levels, qns = nothing)
+    return BlockMPO(sites, W, levels, qns, 1, length(levels))
 end
+
+"""
+    hasqns(B::BlockMPO)
+
+Whether `B` tracks quantum numbers.
+"""
+ITensors.hasqns(B::BlockMPO) = !isnothing(B.qns)
 
 """
     virtualdim(B::BlockMPO)
@@ -113,14 +128,17 @@ function block_mpo(H::MPO; channel::Integer = 1)
     W = [Dict{Tuple{Int, Int}, ITensor}() for _ in 1:n]
     for j in 1:n
         T = H[j]
-        ll = j == 1 ? nothing : links[j - 1]
-        rl = j == n ? nothing : links[j]
+        # Take the link index as it appears in this tensor, so its arrow
+        # is the real one and `dag` gives something that contracts. Under
+        # QNs the arrow matters; without them `dag` is a no-op.
+        ll = j == 1 ? nothing : _linkin(T, j - 1)
+        rl = j == n ? nothing : _linkin(T, j)
         rows = isnothing(ll) ? (1:1) : (1:d)
         cols = isnothing(rl) ? (1:1) : (1:d)
         for a in rows, b in cols
             blk = T
-            isnothing(ll) || (blk = blk * onehot(ll => a))
-            isnothing(rl) || (blk = blk * onehot(rl => b))
+            isnothing(ll) || (blk = blk * onehot(dag(ll) => a))
+            isnothing(rl) || (blk = blk * onehot(dag(rl) => b))
             norm(blk) > 1.0e-14 || continue
             # An absent leg means the tensor is already the boundary
             # row (site 1) or column (site n).
@@ -149,12 +167,26 @@ function block_mpo(H::MPO; channel::Integer = 1)
     _addop!(W[1], d, d, first_id)
 
     levels = Level[[LEVEL_ONE]]
-    for _ in 2:(d - 1)
-        push!(levels, [LevelTag(2, channel)])
+    for p in 2:(d - 1)
+        push!(levels, [LevelTag(2, channel, p - 1)])
     end
     push!(levels, [LevelTag(3, channel)])
 
-    return BlockMPO(sites, W, levels)
+    # Read each level's symmetry sector off the source link, undoing the
+    # same index reversal applied to the operators above.
+    qns = if hasqns(H[1])
+        [ITensors.qn(links[1], rev(p)) for p in 1:d]
+    else
+        nothing
+    end
+
+    return BlockMPO(sites, W, levels, qns)
+end
+
+# The link index bordering bond `b`, taken from the tensor it appears in
+# so that its arrow direction is the actual one.
+function _linkin(T::ITensor, b::Integer)
+    return only(filter(i -> hastags(i, "Link,l=$b"), inds(T)))
 end
 
 """
@@ -172,10 +204,21 @@ becomes applicable to an MPS.
 function to_mpo(B::BlockMPO)
     n = length(B)
     d = virtualdim(B)
-    links = [Index(d, "Link,l=$j") for j in 1:(n - 1)]
+    # Under QNs each level becomes its own one-dimensional sector, so the
+    # link carries exactly the fluxes recorded in `B.qns`. The arrows are
+    # chosen so that a term's flux, `qns[r] - qns[c]`, is cancelled by
+    # its two link legs and every term sums at flux zero.
+    links = if hasqns(B)
+        [
+            Index([B.qns[i] => 1 for i in 1:d]...; tags = "Link,l=$j", dir = ITensors.Out)
+                for j in 1:(n - 1)
+        ]
+    else
+        [Index(d, "Link,l=$j") for j in 1:(n - 1)]
+    end
     tensors = Vector{ITensor}(undef, n)
     for j in 1:n
-        ll = j == 1 ? nothing : links[j - 1]
+        ll = j == 1 ? nothing : dag(links[j - 1])
         rl = j == n ? nothing : links[j]
         T = nothing
         for ((r, c), op) in B.W[j]

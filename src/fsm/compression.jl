@@ -101,5 +101,5 @@ function compress_columns(B::BlockMPO; atol = 1.0e-10)
         end
     end
 
-    return _drop_levels(BlockMPO(B.sites, W, B.levels, B.vL, B.vR), drop)
+    return _drop_levels(BlockMPO(B.sites, W, B.levels, B.qns, B.vL, B.vR), drop)
 end
