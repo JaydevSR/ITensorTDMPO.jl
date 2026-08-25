@@ -1,5 +1,9 @@
 # ITensorTDMPO.jl
 
+[![CI](https://github.com/JaydevSR/ITensorTDMPO.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JaydevSR/ITensorTDMPO.jl/actions/workflows/CI.yml)
+[![Documentation](https://github.com/JaydevSR/ITensorTDMPO.jl/actions/workflows/Documentation.yml/badge.svg)](https://jaydevsr.github.io/ITensorTDMPO.jl/dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+
 ITensorTDMPO.jl provides time evolution for time-dependent Hamiltonians on
 top of [ITensorMPS.jl](https://github.com/ITensor/ITensorMPS.jl) — in
 particular, adiabatic ramps.
@@ -25,11 +29,12 @@ Pkg.develop(path="path/to/ITensorTDMPO.jl")
 ## Documentation
 
 The full documentation — every algorithm, benchmark, and the API
-reference — lives in [`docs/`](docs/) and is not yet deployed online.
-Build it locally:
+reference — is at **[jaydevsr.github.io/ITensorTDMPO.jl](https://jaydevsr.github.io/ITensorTDMPO.jl/dev/)**.
+
+To build it locally instead:
 
 ```julia
-julia --project=docs -e 'using Pkg; Pkg.instantiate(); include("docs/make.jl")'
+julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate(); include("docs/make.jl")'
 ```
 
 then open `docs/build/index.html`.
