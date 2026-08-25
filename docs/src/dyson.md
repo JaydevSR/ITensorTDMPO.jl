@@ -74,10 +74,9 @@ map is where the pairing comes from — a standard feature of
 Magnus/geometric integrators, not a defect: `Ω₁` alone already reaches
 global order 2 (a "free" jump from the exponential), and `Ω₁+Ω₂` jumps
 again to ~4, but `Ω₃` alone doesn't buy a further jump to 6 — that
-requires `Ω₃` *and* `Ω₄` together, which is exactly why an `Ω₄`
-implementation (targeting 6, measuring ~3.7) failed rather than
-complementing `Ω₃` and was removed rather than shipped unverified. See
-[Magnus expansion](@ref) for the full story.
+requires `Ω₃` *and* `Ω₄` together, which is a substantially harder
+nested-commutator basis to get right. See [Magnus expansion](@ref) for
+why `Ω₄` is not offered here and where higher order comes from instead.
 
 ## Reference
 

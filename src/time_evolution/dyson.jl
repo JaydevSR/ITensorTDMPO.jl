@@ -73,11 +73,14 @@ summed with truncation.
     independent of chain length — on finite systems as well as in the
     thermodynamic limit.
 
-    As a result the error here grows steeply with system size, and
-    [`dyson_evolve`](@ref) is already less accurate than freezing the
-    Hamiltonian by a chain length of about 4 sites. Prefer
-    [`magnus_evolve`](@ref), whose exponentiation resums the disjoint
-    contributions for free. See the README for measured numbers.
+    As a result the error here grows steeply with system size — already
+    less accurate than freezing the Hamiltonian by a chain length of
+    about 4 sites. [`dyson_evolve`](@ref) does not have this problem: it
+    builds each step with [`dyson_mpo_fsm`](@ref) instead. Building steps
+    from this function directly is appropriate for small systems and for
+    inspecting individual Dyson terms; for anything larger, prefer
+    [`dyson_evolve`](@ref). See [Scope and limitations](@ref) for the
+    measured comparison.
 
 # Keywords
 
@@ -121,7 +124,7 @@ The step MPO is built by [`dyson_mpo_fsm`](@ref), the size-extensive
 finite-state-machine encoding of
 [Vanthilt et al.](https://arxiv.org/abs/2605.21597): its accuracy does
 not degrade with chain length, unlike the direct construction of
-[`dyson_mpo`](@ref), which remains available for direct use and as the
+[`dyson_mpo`](@ref), which is available for direct use and is the
 independent reference the FSM construction is tested against.
 
 # Keywords

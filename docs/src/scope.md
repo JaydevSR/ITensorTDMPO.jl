@@ -21,7 +21,7 @@ structure — remains implemented and exported as [`dyson_mpo`](@ref) and
 degrades with chain length; see the measured comparison below. It is
 kept because it is useful as an independent reference to verify the FSM
 construction against, and for direct inspection of individual Dyson
-terms, but [`dyson_evolve`](@ref) no longer uses it.
+terms.
 
 **What is not implemented:** the paper's *approximate row compression*
 (Sec. VI B). This is a deliberate scope decision, not an oversight — see
@@ -38,11 +38,10 @@ The practical consequences:
   infidelity after a fixed evolution time changes by less than a factor
   of 2 from a 4-site to an 8-site chain, while the *direct* construction
   of [`dyson_mpo`](@ref)/[`dyson_terms`](@ref) grows by a factor of
-  order 10 over the same range — matching the `N^4.7`-ish scaling
-  originally measured for the direct construction alone. If you need the
-  direct construction's accuracy on more than a handful of sites, prefer
-  [`dyson_evolve`](@ref) over building steps from [`dyson_mpo`](@ref)
-  yourself.
+  order 10 over the same range, matching its `N^4.7`-ish scaling. If you
+  need the direct construction's accuracy on more than a handful of
+  sites, prefer [`dyson_evolve`](@ref) over building steps from
+  [`dyson_mpo`](@ref) yourself.
 - **Bond dimension is competitive with the paper's compressed
   construction on finite systems**, once truncation is accounted for —
   see the next section for the numbers, and why that makes row
@@ -125,10 +124,9 @@ eigenstate, gap against a direct DMRG solve).
 
 The FSM construction specifically is checked by: an exact round-trip
 through the internal first-degree block extraction and reconstruction
-for several
-Hamiltonian shapes (nearest-neighbour, long-range, and XXZ, which has a
-`χ > 1` middle block); the `O(dtᴺ⁺¹)` convergence of the order-`N`
-construction against a dense exponential; the size-extensivity
+for several Hamiltonian shapes (nearest-neighbour, long-range, and XXZ,
+which has a `χ > 1` middle block); the `O(dtᴺ⁺¹)` convergence of the
+order-`N` construction against a dense exponential; the size-extensivity
 comparison above, against the direct construction on the same model; the
 exact-to-machine-precision correctness of the column compression,
 verified by comparing the compressed and uncompressed operators directly

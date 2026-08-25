@@ -160,7 +160,7 @@ column. Those levels are then removed.
 Removing the finished levels destroys the upper-triangular structure,
 and that is what makes the result size-extensive: the operator both
 enters and exits at level `(1)`, so the MPO can be applied to an MPS
-directly. Its accuracy no longer degrades with chain length, unlike the
+directly. Its accuracy does not degrade with chain length, unlike the
 direct construction of [`dyson_terms`](@ref).
 
 The construction is *exact* — no truncation is performed here, since the
@@ -251,7 +251,7 @@ step's operator without driving a full evolution.
 Unlike [`dyson_mpo`](@ref), the accuracy of the operator this returns
 does not degrade with chain length — see
 [Scope and limitations](@ref) for the measured comparison.
-[`dyson_mpo`](@ref) remains available for direct use and as the
+[`dyson_mpo`](@ref) is available for direct use, and is the
 construction this one is verified against.
 
 `cutoff` and `maxdim` truncate the resulting MPO after construction.
@@ -267,13 +267,12 @@ the paper's Sec. VI A before truncation, which only ever shrinks the
 bond dimension the truncation step then has to work with.
 
 !!! warning "Do not loosen `cutoff` much"
-    The default is `1e-14` rather than a more usual `1e-12` because the
-    construction is exact and the truncation error therefore lands
-    directly on the result. At `1e-12` an order-3 MPO stops converging
-    as `O(dt⁴)` once `dt` is small enough for the step error to fall
-    below the truncation floor — the measured rate turns *negative*.
-    Anything looser silently caps the accuracy that raising `order`
-    can buy.
+    The construction is exact, so truncation error lands directly on the
+    result: at `cutoff = 1e-12`, an order-3 MPO stops converging as
+    `O(dt⁴)` once `dt` is small enough for the step error to fall below
+    the truncation floor — the measured rate turns *negative*. The
+    default of `1e-14` avoids this; anything looser silently caps the
+    accuracy that raising `order` can buy.
 """
 function dyson_mpo_fsm(
         channels::DrivingChannels, t0, t;

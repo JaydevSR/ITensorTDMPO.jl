@@ -38,14 +38,13 @@ non-overlapping ("disjoint") contributions cancel between `AB` and `BA`.
 
 Orders 1–3 are supported; **order 2 is the right choice** (order 3
 converges no faster and costs more). See
-[Why Dyson improves order-by-order but Magnus doesn't](@ref) for why,
-and why a fourth-order `Ω₄` is not offered: an implementation of it
-measured ~3.7th order rather than the expected 6th — the
-nested-commutator basis was wrong or incomplete — and was removed rather
-than shipped unverified. For higher order, [CFET](@ref
-"Commutator-free propagator (CFET)") is both the cheaper and the more
-extensible route, since commutator-free schemes are specified by
-coefficient tables rather than commutator algebra.
+[Why Dyson improves order-by-order but Magnus doesn't](@ref) for why. A
+fourth-order `Ω₄` is not offered: reaching genuine 6th order requires
+`Ω₃` and `Ω₄` together in a nested-commutator basis that is nontrivial
+to get right, so [CFET](@ref "Commutator-free propagator (CFET)") is
+the route to higher order here — it is both cheaper and more extensible,
+since commutator-free schemes are specified by coefficient tables rather
+than commutator algebra.
 
 ## Reference
 

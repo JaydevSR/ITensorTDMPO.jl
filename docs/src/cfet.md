@@ -50,8 +50,8 @@ one-word change.
     not validate a fine-step run against the same method at an even
     finer step count as "ground truth" — it can itself be sitting on
     that floor, which silently invalidates the comparison. The test
-    suite learned this the hard way and now checks against an
-    independent dense RK4 reference instead.
+    suite checks against an independent dense RK4 reference for
+    exactly this reason.
 
 ## Reference
 
