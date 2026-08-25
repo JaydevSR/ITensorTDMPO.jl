@@ -1,9 +1,14 @@
 module TDVPlus
 
 using ITensors
-using ITensorMPS: ITensorMPS, MPO, MPS, apply, expand, firstsiteinds, inner, maxlinkdim,
-    siteinds, tdvp
+using ITensorMPS: ITensorMPS, MPO, MPS, apply, expand, firstsiteinds, inner, linkind,
+    maxlinkdim, siteinds, tdvp, truncate
 using LinearAlgebra: LinearAlgebra, norm
+
+# The finite-state-machine layer the paper's constructions operate on.
+# `DrivingChannels` and the drivers below do not depend on it yet.
+include("fsm/levels.jl")
+include("fsm/block_mpo.jl")
 
 include("time_evolution/ramps.jl")
 include("time_evolution/driven_hamiltonian.jl")
@@ -12,6 +17,10 @@ include("time_evolution/schedules.jl")
 # defined before the drivers that dispatch on it.
 include("time_evolution/time_ordered_integrals.jl")
 include("time_evolution/driving_channels.jl")
+# The FSM Dyson construction needs both `DrivingChannels` and the
+# time-ordered integrals, so it follows them.
+include("fsm/dyson_fsm.jl")
+include("fsm/compression.jl")
 include("time_evolution/piecewise_tdvp.jl")
 include("time_evolution/dyson.jl")
 include("time_evolution/magnus.jl")
