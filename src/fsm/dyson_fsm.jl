@@ -229,11 +229,24 @@ The size-extensive Dyson MPO of [`dyson_block_mpo`](@ref), contracted
 into an ordinary `ITensorMPS` MPO ready to apply to a state.
 
 `cutoff` and `maxdim` truncate the resulting MPO after construction.
+This truncation is doing real work: on an XXZ chain it takes the order-3
+bond dimension from 64 to 14 while leaving the error unchanged to three
+significant figures, which is at or below the bond dimensions the
+paper's Sec. VI B row compression is designed to reach.
+
+!!! warning "Do not loosen `cutoff` much"
+    The default is `1e-14` rather than a more usual `1e-12` because the
+    construction is exact and the truncation error therefore lands
+    directly on the result. At `1e-12` an order-3 MPO stops converging
+    as `O(dt⁴)` once `dt` is small enough for the step error to fall
+    below the truncation floor — the measured rate turns *negative*.
+    Anything looser silently caps the accuracy that raising `order`
+    can buy.
 """
 function dyson_mpo_fsm(
         channels::DrivingChannels, t0, t;
         order::Integer = 2,
-        cutoff = 1.0e-12,
+        cutoff = 1.0e-14,
         maxdim = typemax(Int),
         npoints::Integer = 1025,
         prefactor = -im,

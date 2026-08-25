@@ -119,6 +119,35 @@ end
     end
 end
 
+@testset "the default cutoff does not break convergence" begin
+    # Regression: `dyson_mpo_fsm` originally defaulted to cutoff = 1e-12,
+    # which looks tight but is not, because the construction is exact
+    # and the truncation error lands directly on the result. Measured on
+    # an XXZ chain (chi = 3), that default made order-3 convergence
+    # invert (rate -0.31) once dt was small enough for the true step
+    # error to drop below the truncation floor. cutoff = 1e-14 (now the
+    # default) does not touch the convergence rate.
+    n = FSM_N
+    sites = siteinds("S=1/2", n)
+    xxz = OpSum()
+    for j in 1:(n - 1)
+        xxz += 0.5, "S+", j, "S-", j + 1
+        xxz += 0.5, "S-", j, "S+", j + 1
+        xxz += 1.0, "Sz", j, "Sz", j + 1
+    end
+    H = MPO(xxz, sites)
+    Hd = dense_matrix(H, sites)
+
+    errs = Float64[]
+    for dt in (0.1, 0.05, 0.025)
+        ch = DrivingChannels([(1.0, H)])
+        U = dense_matrix(dyson_mpo_fsm(ch, 0.0, dt; order = 3), sites)
+        push!(errs, norm(U - exp(-im * dt * Hd)) / norm(exp(-im * dt * Hd)))
+    end
+    rates = [log2(errs[i] / errs[i + 1]) for i in 1:2]
+    @test all(r -> r > 3.7, rates)
+end
+
 @testset "equivalent-column compression is exact" begin
     sites, Hzz, Hx = _fsm_model()
 
