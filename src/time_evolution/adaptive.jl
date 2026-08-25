@@ -19,6 +19,18 @@ _local_order(::Algorithm"piecewise_constant", order) = 3
 _local_order(::Algorithm"dyson", order) = order + 1
 _local_order(::Algorithm, order) = 3
 
+# Each algorithm's own default `order`, mirroring the per-algorithm
+# `time_evolve` methods in time_evolve.jl. Needed because `_local_order`
+# above depends on `order`: when the caller doesn't pass one, the local
+# order must be computed from the same default that will actually run,
+# not from a value that happens to match only some algorithms. `"cfet"`
+# defaulting to 4 (not `"magnus"`'s 2) is exactly the case this guards
+# against.
+_default_order(::Algorithm"magnus") = 2
+_default_order(::Algorithm"cfet") = 4
+_default_order(::Algorithm"dyson") = 2
+_default_order(::Algorithm) = 2
+
 """
     adaptive_time_evolve(channels, ψ0, t_start, t_stop; tol = 1e-6, kwargs...)
 
@@ -70,7 +82,7 @@ Returns `(state, history)` where `history` is a named tuple of vectors
 """
 function adaptive_time_evolve(
         channels::DrivingChannels, ψ0::MPS, t_start::Number, t_stop::Number;
-        alg = "magnus",
+        alg = "cfet",
         order = nothing,
         tol = 1.0e-6,
         dt_init = nothing,
@@ -87,7 +99,7 @@ function adaptive_time_evolve(
     _check_algorithm(alg)
     total = t_stop - t_start
     iszero(total) && return copy(ψ0), (; times = [float(t_start)], dts = Float64[], errors = Float64[])
-    p = _local_order(_algorithm(alg), something(order, 2))
+    p = _local_order(_algorithm(alg), something(order, _default_order(_algorithm(alg))))
 
     dt = something(dt_init, total / 20)
     dtmin = something(dt_min, abs(total) * 1.0e-10)

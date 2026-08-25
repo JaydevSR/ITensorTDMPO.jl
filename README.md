@@ -48,7 +48,7 @@ using ITensorMPS, ITensorTDMPO
 ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
 
 ψ = time_evolve([(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
-                alg = "cfet", nsteps = 100, cutoff = 1e-10, maxdim = 128)
+                nsteps = 100, cutoff = 1e-10, maxdim = 128)
 ```
 
 ## Testing
@@ -68,5 +68,20 @@ this package implements:
   author  = {Vanthilt, Victor and Van Damme, Maarten and Haegeman, Jutho and McCulloch, Ian P. and Vanderstraeten, Laurens},
   journal = {arXiv preprint arXiv:2605.21597},
   year    = {2025},
+}
+```
+
+The commutator-free propagator (`alg = "cfet"`) is not from that paper;
+it implements the scheme of:
+
+```bibtex
+@article{AlvermannFehske2011,
+  title   = {High-order commutator-free exponential time-propagation of driven quantum systems},
+  author  = {Alvermann, Andreas and Fehske, Holger},
+  journal = {Journal of Computational Physics},
+  volume  = {230},
+  pages   = {5930--5956},
+  year    = {2011},
+  doi     = {10.1016/j.jcp.2011.04.006},
 }
 ```

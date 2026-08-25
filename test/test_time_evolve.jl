@@ -31,16 +31,25 @@ fid(a, b) = abs(inner(a, b)) / (norm(a) * norm(b))
     st = (; cutoff = 1.0e-13, maxdim = 128)
     op = (; cutoff = 1.0e-13, maxdim = 128)
 
-    # Magnus is the default algorithm.
+    # CFET is the default algorithm.
     ψ_default = time_evolve(ch, ψ0, 0.0, T; nsteps = ns, cutoff = st.cutoff, maxdim = st.maxdim,
         operator_cutoff = op.cutoff, operator_maxdim = op.maxdim)
-    ψ_magnus = magnus_evolve(
+    ψ_cfet = cfet_evolve(
+        ch, ψ0, 0.0, T; nsteps = ns, order = 4,
+        operator_kwargs = op, tdvp_kwargs = st
+    )
+    @test fid(ψ_default, ψ_cfet) ≈ 1.0 atol = 1.0e-10
+
+    # Explicit magnus, dyson, piecewise_constant all match their drivers.
+    ψ_magnus = time_evolve(ch, ψ0, 0.0, T; alg = "magnus", nsteps = ns,
+        cutoff = st.cutoff, maxdim = st.maxdim,
+        operator_cutoff = op.cutoff, operator_maxdim = op.maxdim)
+    ψ_magnus_direct = magnus_evolve(
         ch, ψ0, 0.0, T; nsteps = ns, order = 2,
         generator_kwargs = op, tdvp_kwargs = st
     )
-    @test fid(ψ_default, ψ_magnus) ≈ 1.0 atol = 1.0e-10
+    @test fid(ψ_magnus, ψ_magnus_direct) ≈ 1.0 atol = 1.0e-10
 
-    # Explicit magnus, dyson, piecewise_constant all match their drivers.
     ψ_dyson = time_evolve(ch, ψ0, 0.0, T; alg = "dyson", nsteps = ns,
         cutoff = st.cutoff, maxdim = st.maxdim,
         operator_cutoff = op.cutoff, operator_maxdim = op.maxdim)
@@ -58,9 +67,10 @@ fid(a, b) = abs(inner(a, b)) / (norm(a) * norm(b))
     )
     @test fid(ψ_pc, ψ_pc_direct) ≈ 1.0 atol = 1.0e-10
 
-    # All three describe the same physics, so they agree to their accuracy.
-    @test fid(ψ_magnus, ψ_pc) > 0.999
-    @test fid(ψ_magnus, ψ_dyson) > 0.999
+    # All four describe the same physics, so they agree to their accuracy.
+    @test fid(ψ_cfet, ψ_pc) > 0.999
+    @test fid(ψ_cfet, ψ_dyson) > 0.999
+    @test fid(ψ_cfet, ψ_magnus) > 0.999
 end
 
 @testset "piecewise_constant_tdvp from DrivingChannels matches H0/Ht form" begin

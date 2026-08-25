@@ -25,7 +25,7 @@ ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
 
 # Same Hamiltonian, different integrator — nothing else changes.
 ψ = time_evolve([(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
-                alg = "cfet", nsteps = 100)
+                alg = "magnus", nsteps = 100)
 ```
 
 Four algorithms are available — see [The time_evolve interface](@ref) for
@@ -35,8 +35,8 @@ the full keyword reference and a guide to which one to use:
 |---|---|---|---|
 | `"piecewise_constant"` | frozen at one evaluation point | 2 | yes |
 | `"dyson"` | expanded to order `N` in the Dyson series | `N` | approximately |
-| `"magnus"` *(default)* | `Ω₁+Ω₂(+Ω₃)`, applies `exp(Ω)` | ~4 | yes |
-| `"cfet"` | product of exponentials, no commutators | 4 | yes |
+| `"magnus"` | `Ω₁+Ω₂(+Ω₃)`, applies `exp(Ω)` | ~4 | yes |
+| `"cfet"` *(default)* | product of exponentials, no commutators | 4 | yes |
 
 The Dyson and Magnus constructions implement (part of) the algorithms of
 [Vanthilt, Van Damme, Haegeman, McCulloch & Vanderstraeten,
