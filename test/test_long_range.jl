@@ -56,21 +56,7 @@ end
     Mzz, Mx = dense_matrix(Hzz, sites), dense_matrix(Hx, sites)
     v0 = dense_vector(ψ0, sites)
     T = 0.4
-    function rk4(nsub)
-        h = T / nsub
-        v = complex(copy(v0))
-        Ht(t) = fz(t) * Mzz + fx(t) * Mx
-        for k in 0:(nsub - 1)
-            t = k * h
-            k1 = -im * (Ht(t) * v)
-            k2 = -im * (Ht(t + h / 2) * (v .+ (h / 2) .* k1))
-            k3 = -im * (Ht(t + h / 2) * (v .+ (h / 2) .* k2))
-            k4 = -im * (Ht(t + h) * (v .+ h .* k3))
-            v = v .+ (h / 6) .* (k1 .+ 2 .* k2 .+ 2 .* k3 .+ k4)
-        end
-        return v
-    end
-    vex = rk4(20_000)
+    vex = dense_rk4_reference([Mzz, Mx], [fz, fx], v0, 0.0, T)
     td(ψ) = begin
         v = dense_vector(ψ, sites)
         ov = abs(dot(v, vex)) / (norm(v) * norm(vex))

@@ -99,7 +99,7 @@ end
     ψ0 = MPS(ComplexF64, sites, "Up")
     v0 = dense_vector(ψ0, sites)
     T = 0.5
-    v_exact = reference_evolution(Hmats, [f, g], v0, 0.0, T; nsub = 8000)
+    v_exact = reference_evolution(Hmats, [f, g], v0, 0.0, T)
 
     # Higher order gives a smaller error at fixed step count.
     errs = Float64[]
@@ -143,7 +143,7 @@ end
     ψ0 = MPS(ComplexF64, sites, "Up")
     v0 = dense_vector(ψ0, sites)
     T = 0.5
-    v_exact = reference_evolution(Hmats, [f, g], v0, 0.0, T; nsub = 8000)
+    v_exact = reference_evolution(Hmats, [f, g], v0, 0.0, T)
 
     tdvp_kwargs = (; cutoff = 1.0e-14, maxdim = 256, nsteps = 4)
     errs = Float64[]
@@ -179,7 +179,7 @@ end
     v0 = dense_vector(ψ0, sites)
     T = 1.0
     nsteps = 8
-    v_exact = reference_evolution(Hmats, [f, g], v0, 0.0, T; nsub = 20000)
+    v_exact = reference_evolution(Hmats, [f, g], v0, 0.0, T)
 
     ψ_frozen = piecewise_constant_tdvp(
         Hzz, t -> g(t) * Hx, ψ0, 0.0, T; nsteps,
