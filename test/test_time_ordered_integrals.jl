@@ -1,4 +1,4 @@
-using TDVPlus
+using ITensorTDMPO
 using Test
 
 @testset "cumulative_integral" begin

@@ -1,8 +1,8 @@
 using ITensorMPS
 using ITensors
 using LinearAlgebra
-using TDVPlus
-using TDVPlus: block_mpo, to_mpo, is_first_degree, virtualdim, rewire,
+using ITensorTDMPO
+using ITensorTDMPO: block_mpo, to_mpo, is_first_degree, virtualdim, rewire,
     concat_product, dyson_mpo_fsm, dyson_block_mpo, compress_columns,
     equivalent_column_groups, LevelTag, LEVEL_ONE,
     n_twos, n_threes, three_subscripts, strip_ones, is_start, dyson_mpo

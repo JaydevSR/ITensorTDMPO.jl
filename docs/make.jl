@@ -1,17 +1,14 @@
 using Documenter
-using TDVPlus
+using ITensorTDMPO
 
-DocMeta.setdocmeta!(TDVPlus, :DocTestSetup, :(using TDVPlus); recursive = true)
+DocMeta.setdocmeta!(ITensorTDMPO, :DocTestSetup, :(using ITensorTDMPO); recursive = true)
 
 makedocs(;
-    modules = [TDVPlus],
-    authors = "u0174972",
-    sitename = "TDVPlus.jl",
-    # No GitHub remote is configured for this repository yet, so there is
-    # nothing for Documenter to link "edit this page" to. Once a remote
-    # exists, drop `remotes = nothing` and either pass `repo` explicitly
-    # or let Documenter infer it from `git remote get-url origin`.
-    remotes = nothing,
+    modules = [ITensorTDMPO],
+    authors = "JaydevSR",
+    sitename = "ITensorTDMPO.jl",
+    # Inferred from the `origin` remote now that one is configured — no
+    # explicit `remotes`/`repo` override needed for "edit this page" links.
     # Only exported names need a `@docs`/`@autodocs` home; internal helpers
     # (`ChannelSpec`, `cumulative_integral!`, the `Base.empty!` extension)
     # have docstrings for readers of the source, not for the manual.
@@ -41,9 +38,7 @@ makedocs(;
 )
 
 
-# `deploydocs` publishes the built site to the `gh-pages` branch of a GitHub
-# remote. No remote is configured for this repository yet — uncomment and
-# fill in `repo` once it lives on GitHub, and see the CI workflow at
-# `.github/workflows/CI.yml`, which calls `makedocs`/`deploydocs` on push.
-#
-# deploydocs(; repo = "github.com/<org>/TDVPlus.jl", devbranch = "main")
+# Publishes the built site to the `gh-pages` branch of the GitHub remote.
+# The `Documentation.yml` workflow calls `makedocs`/`deploydocs` (this
+# file) on every push to `main` and on version tags.
+deploydocs(; repo = "github.com/JaydevSR/ITensorTDMPO.jl", devbranch = "main")

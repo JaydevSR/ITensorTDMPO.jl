@@ -1,8 +1,8 @@
 ```@meta
-CurrentModule = TDVPlus
+CurrentModule = ITensorTDMPO
 ```
 
-# TDVPlus.jl
+# ITensorTDMPO.jl
 
 Personal extensions to [ITensorMPS.jl](https://github.com/ITensor/ITensorMPS.jl)
 for time evolution under time-dependent Hamiltonians, in particular
@@ -16,7 +16,7 @@ a scalar driving function (or a plain number, for a constant coefficient)
 — and a single entry point, [`time_evolve`](@ref), selects the integrator:
 
 ```julia
-using ITensorMPS, TDVPlus
+using ITensorMPS, ITensorTDMPO
 
 ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
 
@@ -50,7 +50,7 @@ Not registered yet. From the Julia REPL:
 
 ```julia
 using Pkg
-Pkg.develop(path="path/to/TDVPlus.jl")
+Pkg.develop(path="path/to/ITensorTDMPO.jl")
 ```
 
 ## Citation

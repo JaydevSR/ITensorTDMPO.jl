@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = TDVPlus
+CurrentModule = ITensorTDMPO
 ```
 
 # The `time_evolve` interface

@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = TDVPlus
+CurrentModule = ITensorTDMPO
 ```
 
 # Magnus expansion

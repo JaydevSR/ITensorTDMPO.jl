@@ -1,9 +1,9 @@
-using TDVPlus
+using ITensorTDMPO
 using Test
 
 # `verbose = true` with one nested testset per file reports a per-file
 # time breakdown, which is what tells you where a slow run went.
-@testset verbose = true "TDVPlus.jl" begin
+@testset verbose = true "ITensorTDMPO.jl" begin
     for file in [
             "test_ramps.jl",
             "test_piecewise_tdvp.jl",

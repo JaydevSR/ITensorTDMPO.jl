@@ -1,6 +1,6 @@
 using ITensorMPS
 using ITensors
-using TDVPlus
+using ITensorTDMPO
 using LinearAlgebra: norm
 using Test
 

@@ -1,4 +1,4 @@
-module TDVPlus
+module ITensorTDMPO
 
 using ITensors
 using ITensors: QN, hasqns, op
@@ -85,4 +85,4 @@ export
     magnus_generator,
     magnus_evolve
 
-end # module TDVPlus
+end # module ITensorTDMPO

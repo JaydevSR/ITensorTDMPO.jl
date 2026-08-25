@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = TDVPlus
+CurrentModule = ITensorTDMPO
 ```
 
 # Piecewise-constant TDVP
@@ -8,7 +8,7 @@ The simplest algorithm: freeze `H(t)` once per interval and run an
 ordinary TDVP sweep across it.
 
 ```julia
-using ITensorMPS, TDVPlus
+using ITensorMPS, ITensorTDMPO
 
 sites = siteinds("S=1/2", 20)
 Hzz = MPO(OpSum() + ..., sites)          # coupling

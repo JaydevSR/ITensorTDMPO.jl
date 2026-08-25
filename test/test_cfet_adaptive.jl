@@ -1,6 +1,6 @@
 using ITensorMPS
 using ITensors
-using TDVPlus
+using ITensorTDMPO
 using LinearAlgebra
 using Random
 using Test

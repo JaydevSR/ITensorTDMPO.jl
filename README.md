@@ -1,6 +1,6 @@
-# TDVPlus.jl
+# ITensorTDMPO.jl
 
-TDVPlus.jl provides time evolution for time-dependent Hamiltonians on
+ITensorTDMPO.jl provides time evolution for time-dependent Hamiltonians on
 top of [ITensorMPS.jl](https://github.com/ITensor/ITensorMPS.jl) — in
 particular, adiabatic ramps.
 
@@ -19,7 +19,7 @@ Not registered yet; not affiliated with the ITensor project.
 
 ```julia
 using Pkg
-Pkg.develop(path="path/to/TDVPlus.jl")
+Pkg.develop(path="path/to/ITensorTDMPO.jl")
 ```
 
 ## Documentation
@@ -37,7 +37,7 @@ then open `docs/build/index.html`.
 ## Quick example
 
 ```julia
-using ITensorMPS, TDVPlus
+using ITensorMPS, ITensorTDMPO
 
 ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
 
