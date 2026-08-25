@@ -130,6 +130,20 @@ function rewire(channels::DrivingChannels)
 end
 
 """
+    _identity_block_mpo(channels::DrivingChannels)
+
+The order-0 Dyson MPO, i.e. the identity, as a single-level
+[`BlockMPO`](@ref). `concat_product` needs at least one factor, so order
+0 is handled directly rather than as a zero-fold product.
+"""
+function _identity_block_mpo(channels::DrivingChannels)
+    sites = collect(siteinds(channels))
+    W = [Dict((1, 1) => op("Id", s)) for s in sites]
+    qns = hasqns(first(sites)) ? [QN()] : nothing
+    return BlockMPO(sites, W, Level[[LEVEL_ONE]], qns)
+end
+
+"""
     dyson_block_mpo(channels, t0, t; order, npoints, prefactor)
 
 The `order`-th order Dyson MPO of the paper's Algorithm 2, as a
@@ -160,7 +174,8 @@ function dyson_block_mpo(
         prefactor = -im,
         compress::Bool = true
     )
-    order >= 1 || throw(ArgumentError("`order` must be at least 1, got $order."))
+    order >= 0 || throw(ArgumentError("`order` must be non-negative, got $order."))
+    order == 0 && return _identity_block_mpo(channels)
 
     H = rewire(channels)
     O = H

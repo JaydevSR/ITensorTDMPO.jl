@@ -1,7 +1,7 @@
 module TDVPlus
 
 using ITensors
-using ITensors: QN, hasqns
+using ITensors: QN, hasqns, op
 using ITensorMPS: ITensorMPS, MPO, MPS, apply, expand, firstsiteinds, inner, linkind,
     maxlinkdim, siteinds, tdvp, truncate
 using LinearAlgebra: LinearAlgebra, norm

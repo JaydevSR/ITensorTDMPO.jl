@@ -5,7 +5,7 @@ using TDVPlus
 using TDVPlus: block_mpo, to_mpo, is_first_degree, virtualdim, rewire,
     concat_product, dyson_mpo_fsm, dyson_block_mpo, compress_columns,
     equivalent_column_groups, LevelTag, LEVEL_ONE,
-    n_twos, n_threes, three_subscripts, strip_ones, is_start
+    n_twos, n_threes, three_subscripts, strip_ones, is_start, dyson_mpo
 using Test
 
 isdefined(@__MODULE__, :dense_matrix) || include("dense_reference.jl")
@@ -207,6 +207,29 @@ end
     # ... and growing for the direct one, which is the bug Tier 3 fixes.
     @test direct[2] / direct[1] > 3.0
     @test direct[2] > 50 * fsm[2]
+end
+
+@testset "dyson_evolve inherits size-extensivity from the swap" begin
+    # `dyson_evolve` used to build each step with the direct construction
+    # `dyson_mpo`; it now uses `dyson_mpo_fsm`. This checks the swap
+    # through the actual user-facing driver -- multiple steps,
+    # normalization, apply truncation -- rather than only the single-step
+    # MPO tested above.
+    T, dt = 0.3, 0.1
+    order = 2
+    per_site = Float64[]
+    for n in (4, FSM_N)
+        sites, Hzz, Hx = _fsm_model(n)
+        Hd = dense_matrix(+(Hzz, Hx; alg = "directsum"), sites)
+        psi0 = MPS(sites, j -> "Up")
+        v0 = dense_vector(psi0, sites)
+        ch = DrivingChannels([(1.0, Hzz), (1.0, Hx)])
+
+        evolved = dyson_evolve(ch, psi0, 0.0, T; dt, order)
+        vex = exp(-im * T * Hd) * v0
+        push!(per_site, infidelity(vex, dense_vector(evolved, sites)) / n)
+    end
+    @test per_site[2] / per_site[1] < 2.0
 end
 
 @testset "compression handles a chi > 1 block" begin

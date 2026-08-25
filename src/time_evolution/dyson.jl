@@ -117,11 +117,18 @@ exactly, to the given order, through the time-ordered integrals of the
 driving functions. This allows substantially larger time steps for
 rapidly varying drives.
 
+The step MPO is built by [`dyson_mpo_fsm`](@ref), the size-extensive
+finite-state-machine encoding of
+[Vanthilt et al.](https://arxiv.org/abs/2605.21597): its accuracy does
+not degrade with chain length, unlike the direct construction of
+[`dyson_mpo`](@ref), which remains available for direct use and as the
+independent reference the FSM construction is tested against.
+
 # Keywords
 
   - `order = 2`: order of the Dyson expansion on each step.
-  - `mpo_kwargs = (;)`: forwarded to [`dyson_mpo`](@ref) (`cutoff`,
-    `maxdim`, `npoints`).
+  - `mpo_kwargs = (;)`: forwarded to [`dyson_mpo_fsm`](@ref) (`cutoff`,
+    `maxdim`, `npoints`, `compress`).
   - `apply_kwargs = (; cutoff = 1e-10)`: forwarded to `apply(U, ψ)`.
   - `normalize = true`: renormalize the state after each step. A
     truncated Dyson MPO is not exactly unitary, so for real-time
@@ -146,7 +153,7 @@ function dyson_evolve(
     for step in 1:nsteps
         t_start = times[step]
         t_stop = times[step + 1]
-        U = dyson_mpo(channels, t_start, t_stop; order, mpo_kwargs...)
+        U = dyson_mpo_fsm(channels, t_start, t_stop; order, mpo_kwargs...)
         ψ = apply(U, ψ; apply_kwargs...)
         normalize && LinearAlgebra.normalize!(ψ)
         if !isnothing(step_observer!)
