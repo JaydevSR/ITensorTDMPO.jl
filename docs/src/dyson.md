@@ -13,11 +13,11 @@ U(t, t₀) = 1 + Σₐ [fₐ] H⁽ᵃ⁾ + Σₐᵦ [fₐfᵦ] H⁽ᵃ⁾H⁽ᵇ
                 alg = "dyson", order = 2, nsteps = 100)
 
 # ...or the driver directly, for independent control of each truncation
-U = dyson_mpo(channels, t0, t1; order = 2, cutoff = 1e-12)
+U = dyson_mpo_fsm(channels, t0, t1; order = 2, cutoff = 1e-14)
 ψ = dyson_evolve(
     channels, ψ0, 0.0, 10.0;
     nsteps = 100, order = 2,
-    mpo_kwargs = (; cutoff = 1e-12),
+    mpo_kwargs = (; cutoff = 1e-14),
     apply_kwargs = (; cutoff = 1e-10, maxdim = 128),
 )
 ```
@@ -29,18 +29,34 @@ For a single channel with constant driving the construction reduces to
 the truncated Taylor series of `exp(-i Δ H)`, which the tests verify
 against dense matrices.
 
-!!! warning "Prefer Magnus or CFET"
-    `dyson_evolve`'s accuracy degrades with chain length — see
-    [Scope and limitations](@ref) — and it should be treated as a
-    reference implementation of the series (useful for small systems,
-    short steps, and cross-checking the other algorithms) rather than a
-    production driver.
+## Two constructions
+
+[`dyson_evolve`](@ref) builds each step with [`dyson_mpo_fsm`](@ref),
+the size-extensive finite-state-machine encoding of
+[Vanthilt et al.](https://arxiv.org/abs/2605.21597) — its accuracy does
+not degrade with chain length.
+
+A second, *direct* construction is also implemented and exported —
+[`dyson_mpo`](@ref) and [`dyson_terms`](@ref) — which builds operator
+strings by explicit MPO multiplication rather than by manipulating the
+paper's `{L, R, A, D}` block structure. It is simpler and useful for
+inspecting individual terms of the series directly, and it is what the
+FSM construction is verified against, but it is **not** size-extensive:
+its error grows sharply with chain length, and by around 4 sites it is
+already less accurate than freezing the Hamiltonian. Prefer
+[`dyson_evolve`](@ref)/[`dyson_mpo_fsm`](@ref) unless you specifically
+need [`dyson_mpo`](@ref)'s direct term-by-term construction. See
+[Scope and limitations](@ref) for the measured comparison and why the
+paper's row compression is not implemented on top of the FSM
+construction.
 
 ## Why Dyson improves order-by-order but Magnus doesn't
 
 The paper's own benchmark (Sec. VIII A) shows the Dyson MPO's error
-scaling cleanly as `O(dtᴺ)` at every order `N`. Measured here, against an
-exact dense reference, `dyson_mpo` reproduces that exactly:
+scaling cleanly as `O(dtᴺ)` at every order `N`. Both constructions
+encode the same series to the same order, so this applies equally to
+[`dyson_mpo_fsm`](@ref) and [`dyson_mpo`](@ref); the table below was
+measured on the latter, against an exact dense reference:
 
 | order | 1 | 2 | 3 |
 |---|---|---|---|
@@ -66,7 +82,8 @@ complementing `Ω₃` and was removed rather than shipped unverified. See
 ## Reference
 
 ```@docs
+dyson_evolve
+dyson_mpo_fsm
 dyson_mpo
 dyson_terms
-dyson_evolve
 ```

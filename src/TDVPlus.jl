@@ -78,6 +78,7 @@ export
     # Dyson series
     dyson_terms,
     dyson_mpo,
+    dyson_mpo_fsm,
     dyson_evolve,
     # Magnus expansion
     magnus_terms,

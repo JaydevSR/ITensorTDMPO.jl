@@ -238,16 +238,33 @@ function _drop_levels(B::BlockMPO, drop)
 end
 
 """
-    dyson_mpo_fsm(channels, t0, t; order, cutoff, maxdim, npoints, prefactor)
+    dyson_mpo_fsm(channels, t0, t; order = 2, cutoff, maxdim, npoints, prefactor, compress)
 
-The size-extensive Dyson MPO of [`dyson_block_mpo`](@ref), contracted
-into an ordinary `ITensorMPS` MPO ready to apply to a state.
+The `order`-th order Dyson MPO of the time-evolution operator `U(t, t₀)`,
+built by the size-extensive finite-state-machine encoding of
+[Vanthilt et al.](https://arxiv.org/abs/2605.21597) rather than by
+direct MPO multiplication. This is the construction
+[`dyson_evolve`](@ref) uses for each step; call it directly for
+independent control of the per-step truncation, or to build a single
+step's operator without driving a full evolution.
+
+Unlike [`dyson_mpo`](@ref), the accuracy of the operator this returns
+does not degrade with chain length — see
+[Scope and limitations](@ref) for the measured comparison.
+[`dyson_mpo`](@ref) remains available for direct use and as the
+construction this one is verified against.
 
 `cutoff` and `maxdim` truncate the resulting MPO after construction.
 This truncation is doing real work: on an XXZ chain it takes the order-3
 bond dimension from 64 to 14 while leaving the error unchanged to three
 significant figures, which is at or below the bond dimensions the
-paper's Sec. VI B row compression is designed to reach.
+paper's Sec. VI B row compression is designed to reach — see
+[Scope and limitations](@ref) for why that compression is not
+implemented separately.
+
+`compress = true` applies the *exact* equivalent-column compression of
+the paper's Sec. VI A before truncation, which only ever shrinks the
+bond dimension the truncation step then has to work with.
 
 !!! warning "Do not loosen `cutoff` much"
     The default is `1e-14` rather than a more usual `1e-12` because the
