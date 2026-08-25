@@ -22,38 +22,8 @@ end
 
 const CA_EXACT = (; cutoff = 1.0e-14, maxdim = 256)
 
-"""
-Dense RK4 reference for `i dψ/dt = H(t)ψ`, independent of both TDVP and
-the CFET/Magnus code under test. Fourth order in `1/nsub`, so at
-`nsub = 20_000` over an O(1) interval it is accurate to machine precision
-and safe to use as ground truth for validating a 4th-order MPS integrator
-down to ~1e-6–1e-7.
-
-Unlike comparing against the same method at a large step count, this
-cannot land on that method's own roundoff floor: TDVP applied many times
-in sequence (as any of these drivers must, at fine step counts) has an
-error that *decreases then increases* as steps are refined, because
-per-sweep roundoff accumulates once the step is fine enough that the
-truncation error drops below it (this is documented behavior, not a bug —
-see the Magnus/CFET benchmarks in the README). A "reference" built from
-that same method at a very fine step count can therefore be *less*
-accurate than a coarser run of the identical method, which silently
-invalidates any comparison built on it.
-"""
-function dense_rk4_reference(Hmats::Vector{<:AbstractMatrix}, fs, v0, t0, t1; nsub = 20_000)
-    h = (t1 - t0) / nsub
-    v = complex(copy(v0))
-    Ht(t) = sum(fs[a](t) * Hmats[a] for a in eachindex(Hmats))
-    for k in 0:(nsub - 1)
-        t = t0 + k * h
-        k1 = -im * (Ht(t) * v)
-        k2 = -im * (Ht(t + h / 2) * (v .+ (h / 2) .* k1))
-        k3 = -im * (Ht(t + h / 2) * (v .+ (h / 2) .* k2))
-        k4 = -im * (Ht(t + h) * (v .+ h .* k3))
-        v = v .+ (h / 6) .* (k1 .+ 2 .* k2 .+ 2 .* k3 .+ k4)
-    end
-    return v
-end
+# `dense_rk4_reference` now lives in `dense_reference.jl`, shared with
+# the Dyson/Magnus tests.
 
 """Trace distance between an MPS `ψ` and a dense reference vector `vex`."""
 function trace_distance_dense(ψ::MPS, vex, sites)
