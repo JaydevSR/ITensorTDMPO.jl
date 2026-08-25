@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/JaydevSR/ITensorTDMPO.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JaydevSR/ITensorTDMPO.jl/actions/workflows/CI.yml)
 [![Documentation](https://github.com/JaydevSR/ITensorTDMPO.jl/actions/workflows/Documentation.yml/badge.svg)](https://jaydevsr.github.io/ITensorTDMPO.jl/dev/)
+[![codecov](https://codecov.io/gh/JaydevSR/ITensorTDMPO.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JaydevSR/ITensorTDMPO.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 ITensorTDMPO.jl provides time evolution for time-dependent Hamiltonians on
