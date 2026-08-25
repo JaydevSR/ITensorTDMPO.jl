@@ -115,7 +115,8 @@ non-unitary contraction.
 
 !!! note "Scope"
     Commutators are formed by direct MPO multiplication rather than
-    through the paper's finite-state-machine encoding. See the README.
+    through the paper's finite-state-machine encoding. See
+    [Scope and limitations](@ref).
 """
 function magnus_generator(
         channels::DrivingChannels, t0, t;

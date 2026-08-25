@@ -52,8 +52,9 @@ way — as a [`DrivingChannels`](@ref) decomposition `H(t) = Σₐ fₐ(t) H^{(a
   - `"piecewise_constant"` — [`piecewise_constant_tdvp`](@ref). Freezes
     `H(t)` on each interval and runs a TDVP sweep. 2nd order.
   - `"dyson"` — [`dyson_evolve`](@ref). Expands the step in the Dyson
-    series and applies the resulting MPO. See the README: its accuracy
-    degrades with chain length, so prefer `"magnus"`.
+    series and applies the resulting MPO. Size-extensive and does not
+    degrade with chain length, but `"magnus"`/`"cfet"` are markedly more
+    accurate at the same order — see [Scope and limitations](@ref).
 
 `alg` accepts a `String`, a `Symbol`, or an `ITensors.Algorithm`.
 

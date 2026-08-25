@@ -23,11 +23,8 @@ jobs:
       - uses: julia-actions/cache@v2
       - name: Install dependencies
         run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      # `docs/make.jl` builds the site on every run; the `deploydocs` call
-      # that actually publishes to `gh-pages` is commented out there until
-      # this repository has a GitHub remote to publish to. Uncomment it
-      # (filling in `repo`) once one exists — this workflow needs no
-      # further changes.
+      # `docs/make.jl` builds the site and, via `deploydocs`, publishes it
+      # to `gh-pages` on every run on `main` or a version tag.
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

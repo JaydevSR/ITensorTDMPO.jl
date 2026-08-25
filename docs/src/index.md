@@ -4,7 +4,7 @@ CurrentModule = ITensorTDMPO
 
 # ITensorTDMPO.jl
 
-Personal extensions to [ITensorMPS.jl](https://github.com/ITensor/ITensorMPS.jl)
+An [ITensorMPS.jl](https://github.com/ITensor/ITensorMPS.jl) extension
 for time evolution under time-dependent Hamiltonians, in particular
 adiabatic ramps.
 

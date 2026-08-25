@@ -43,10 +43,10 @@ fast near a gap minimum and slow elsewhere — and not for a uniform drive.
     the coarse/fine comparison starts measuring roundoff noise instead of
     integration error, at which point *more* steps make the true result
     *worse*. A telltale sign is `history.errors` reading exactly `0.0`.
-    Measured on the README's benchmark model, the true error is minimized
-    around `tol ≈ 1e-7` and increases for `tol ≤ 1e-8`; keep `tol` at or
-    above roughly the `cutoff` in use, not many orders tighter. See the
-    README for the full measurement.
+    On the benchmark model used throughout this page, the true error is
+    minimized around `tol ≈ 1e-7` and increases for `tol ≤ 1e-8`; keep
+    `tol` at or above roughly the `cutoff` in use, not many orders
+    tighter.
 
 # Keywords
 
