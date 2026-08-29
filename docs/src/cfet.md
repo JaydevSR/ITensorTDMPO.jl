@@ -4,10 +4,8 @@ CurrentModule = ITensorTDMPO
 
 # Commutator-free propagator (CFET)
 
-Unlike the Dyson and Magnus constructions, this is not from
-[Vanthilt et al.](https://arxiv.org/abs/2605.21597). The scheme —
-two exponentials at two-point Gauss–Legendre nodes, weighted
-`(3 ± 2√3)/12` — is the standard fourth-order commutator-free
+The scheme — two exponentials at two-point Gauss–Legendre nodes,
+weighted `(3 ± 2√3)/12` — is the standard fourth-order commutator-free
 exponential time propagator for driven quantum systems, introduced by
 [Alvermann & Fehske (2011)](https://doi.org/10.1016/j.jcp.2011.04.006),
 *High-order commutator-free exponential time-propagation of driven

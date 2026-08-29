@@ -71,8 +71,8 @@ this package implements:
 }
 ```
 
-The commutator-free propagator (`alg = "cfet"`) is not from that paper;
-it implements the scheme of:
+The commutator-free propagator (`alg = "cfet"`) implements the scheme
+of:
 
 ```bibtex
 @article{AlvermannFehske2011,
