@@ -12,7 +12,7 @@ permissions:
   checks: read
   contents: write
   deployments: read
-  issues: read
+  issues: write
   discussions: read
   packages: read
   pages: read
@@ -27,4 +27,9 @@ jobs:
     steps:
       - uses: JuliaRegistries/TagBot@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # The default GITHUB_TOKEN cannot push a tag on a commit whose
+          # history touches .github/workflows/*.yml -- a hard GitHub
+          # restriction on the auto-issued token, not a config choice.
+          # TAGBOT_TOKEN is a fine-grained PAT scoped to this repo only
+          # (Contents + Workflows: Read and write), which is exempt.
+          token: ${{ secrets.TAGBOT_TOKEN }}
