@@ -66,3 +66,18 @@ package implements:
   year    = {2025},
 }
 ```
+
+The commutator-free propagator (`alg = "cfet"`) implements the scheme
+of:
+
+```bibtex
+@article{AlvermannFehske2011,
+  title   = {High-order commutator-free exponential time-propagation of driven quantum systems},
+  author  = {Alvermann, Andreas and Fehske, Holger},
+  journal = {Journal of Computational Physics},
+  volume  = {230},
+  pages   = {5930--5956},
+  year    = {2011},
+  doi     = {10.1016/j.jcp.2011.04.006},
+}
+```
