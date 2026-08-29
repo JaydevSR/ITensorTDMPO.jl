@@ -9,8 +9,8 @@ this package. The Hamiltonian is always given as [driving channels](@ref
 "Driving channels"); only `alg` changes which integrator runs.
 
 ```julia
-ψ = time_evolve(channels, ψ0, 0.0, 10.0; nsteps = 100)                        # magnus (default)
-ψ = time_evolve(channels, ψ0, 0.0, 10.0; alg = "cfet", nsteps = 100)
+ψ = time_evolve(channels, ψ0, 0.0, 10.0; nsteps = 100)                        # cfet (default)
+ψ = time_evolve(channels, ψ0, 0.0, 10.0; alg = "magnus", nsteps = 100)
 ψ = time_evolve(channels, ψ0, 0.0, 10.0; alg = "dyson", order = 3, nsteps = 100)
 ```
 
@@ -23,9 +23,9 @@ option without going through `alg_kwargs`.
 
 | keyword | default | meaning |
 |---|---|---|
-| `alg` | `"magnus"` | integrator; a `String`, `Symbol` or `ITensors.Algorithm` |
+| `alg` | `"cfet"` | integrator; a `String`, `Symbol` or `ITensors.Algorithm` |
 | `nsteps` / `dt` | — | time grid, following `ITensorMPS.tdvp` conventions; or pass `times` directly |
-| `order` | `2` | expansion order — Magnus 1–3, Dyson `≥ 0`. Errors for `"piecewise_constant"`, which does not expand the step |
+| `order` | per-algorithm | expansion order — 4 for CFET (2 or 4 only), 2 for Magnus (1–3) and Dyson (`≥ 0`). Errors for `"piecewise_constant"`, which does not expand the step |
 | `cutoff` / `maxdim` | `1e-10` / `typemax(Int)` | truncation of the evolving **state** |
 | `operator_cutoff` / `operator_maxdim` | `1e-12` / `typemax(Int)` | truncation of the **operators** built along the way — `Ω`, the Dyson MPO, the frozen `H(t)` |
 | `generator_prefactor` | `-im` | `-im` for real time, `-1` for imaginary time |
@@ -41,13 +41,14 @@ Unknown algorithm names raise an `ArgumentError` listing the valid ones
 
 ## Which algorithm to use
 
-**Use `alg = "magnus"`** (the default) or, better still, `alg = "cfet"`
-(see [Commutator-free propagator (CFET)](@ref), which measures faster
-*and* more accurate). `alg = "dyson"` is size-extensive — its accuracy
-does not degrade with chain length, see [Scope and limitations](@ref) —
-but Magnus's exponentiation resums disjoint higher-order terms for free,
-which the plain truncated Dyson series does not, so Magnus/CFET are
-markedly more accurate at the same order and are the better default.
+**Use `alg = "cfet"`** (the default) — see
+[Commutator-free propagator (CFET)](@ref), measured faster *and* more
+accurate than `alg = "magnus"` at equal step count. `alg = "dyson"` is
+size-extensive — its accuracy does not degrade with chain length, see
+[Scope and limitations](@ref) — but CFET/Magnus's exponentiation resums
+disjoint higher-order terms for free, which the plain truncated Dyson
+series does not, so CFET/Magnus are markedly more accurate at the same
+order and are the better default.
 
 Measured infidelity against a dense RK4 reference for a driven TFIM
 chain (`Sz·Sz` + an oscillating transverse field) at fixed `dt = 0.05`,

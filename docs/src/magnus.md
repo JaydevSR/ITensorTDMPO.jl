@@ -14,7 +14,7 @@ CurrentModule = ITensorTDMPO
 
 ```julia
 ψ = time_evolve([(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
-                order = 2, nsteps = 100)     # "magnus" is the default
+                alg = "magnus", order = 2, nsteps = 100)
 
 # ...or the driver directly
 Ω = magnus_generator(channels, t0, t1; order = 2)

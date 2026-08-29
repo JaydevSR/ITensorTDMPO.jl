@@ -1,6 +1,9 @@
 """
 Gauss–Legendre nodes on `[0, 1]` used by the fourth-order
-commutator-free scheme.
+commutator-free scheme of
+[Alvermann & Fehske (2011)](https://doi.org/10.1016/j.jcp.2011.04.006),
+*High-order commutator-free exponential time-propagation of driven
+quantum systems*, J. Comput. Phys. 230, 5930.
 """
 const CF4_NODES = (0.5 - sqrt(3) / 6, 0.5 + sqrt(3) / 6)
 

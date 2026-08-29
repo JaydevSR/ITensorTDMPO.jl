@@ -35,8 +35,8 @@ function _check_algorithm(alg)
 end
 
 """
-    time_evolve(channels::DrivingChannels, ψ0::MPS, times; alg = "magnus", kwargs...)
-    time_evolve(channels, ψ0, t_start, t_stop; dt = nothing, nsteps = nothing, alg = "magnus", kwargs...)
+    time_evolve(channels::DrivingChannels, ψ0::MPS, times; alg = "cfet", kwargs...)
+    time_evolve(channels, ψ0, t_start, t_stop; dt = nothing, nsteps = nothing, alg = "cfet", kwargs...)
 
 Evolve `ψ0` under the time-dependent Hamiltonian carried by `channels`,
 choosing the integrator with `alg`. This is the single entry point for
@@ -46,23 +46,27 @@ way — as a [`DrivingChannels`](@ref) decomposition `H(t) = Σₐ fₐ(t) H^{(a
 
 # Algorithms
 
-  - `"magnus"` (default) — [`magnus_evolve`](@ref). Expands the step in the
-    Magnus series and applies `exp(Ω)`. Unitary, ~4th order, and the
-    recommended choice.
+  - `"cfet"` (default) — [`cfet_evolve`](@ref). Product of exponentials at
+    Gauss–Legendre nodes, no commutators formed. Unitary, 4th order, and
+    measured faster *and* more accurate than `"magnus"` at equal step
+    count — see [Commutator-free propagator (CFET)](@ref).
+  - `"magnus"` — [`magnus_evolve`](@ref). Expands the step in the Magnus
+    series and applies `exp(Ω)`. Unitary, ~4th order.
   - `"piecewise_constant"` — [`piecewise_constant_tdvp`](@ref). Freezes
     `H(t)` on each interval and runs a TDVP sweep. 2nd order.
   - `"dyson"` — [`dyson_evolve`](@ref). Expands the step in the Dyson
     series and applies the resulting MPO. Size-extensive and does not
-    degrade with chain length, but `"magnus"`/`"cfet"` are markedly more
+    degrade with chain length, but `"cfet"`/`"magnus"` are markedly more
     accurate at the same order — see [Scope and limitations](@ref).
 
 `alg` accepts a `String`, a `Symbol`, or an `ITensors.Algorithm`.
 
 # Keywords
 
-  - `order`: expansion order, for `"magnus"` (1–3) and `"dyson"`. Defaults
-    to 2. Passing it with `alg = "piecewise_constant"` is an error, since
-    that method does not expand the step.
+  - `order`: expansion order. Defaults to each algorithm's own choice —
+    4 for `"cfet"` (2 or 4 only), 2 for `"magnus"` (1–3) and `"dyson"`
+    (`≥ 0`). Passing it with `alg = "piecewise_constant"` is an error,
+    since that method does not expand the step.
   - `cutoff = 1e-10`, `maxdim`: truncation of the evolving **state**.
   - `operator_cutoff = 1e-12`, `operator_maxdim`: truncation of the
     **operators** built along the way — the Magnus generator, the Dyson
@@ -94,7 +98,7 @@ ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
                    alg = "piecewise_constant", nsteps = 100)
 ```
 """
-function time_evolve(channels::DrivingChannels, ψ0::MPS, times; alg = "magnus", kwargs...)
+function time_evolve(channels::DrivingChannels, ψ0::MPS, times; alg = "cfet", kwargs...)
     _check_algorithm(alg)
     return time_evolve(_algorithm(alg), channels, ψ0, times; kwargs...)
 end

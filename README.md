@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/JaydevSR/ITensorTDMPO.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JaydevSR/ITensorTDMPO.jl/actions/workflows/CI.yml)
 [![Documentation](https://github.com/JaydevSR/ITensorTDMPO.jl/actions/workflows/Documentation.yml/badge.svg)](https://jaydevsr.github.io/ITensorTDMPO.jl/dev/)
+[![codecov](https://codecov.io/gh/JaydevSR/ITensorTDMPO.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JaydevSR/ITensorTDMPO.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 ITensorTDMPO.jl provides time evolution for time-dependent Hamiltonians on
@@ -47,7 +48,7 @@ using ITensorMPS, ITensorTDMPO
 ramp = Ramp(SmoothstepRamp(), 0.0, 10.0, 0.0, 2.0)
 
 ψ = time_evolve([(1.0, Hzz), (ramp, Hx)], ψ0, 0.0, 10.0;
-                alg = "cfet", nsteps = 100, cutoff = 1e-10, maxdim = 128)
+                nsteps = 100, cutoff = 1e-10, maxdim = 128)
 ```
 
 ## Testing
@@ -67,5 +68,20 @@ this package implements:
   author  = {Vanthilt, Victor and Van Damme, Maarten and Haegeman, Jutho and McCulloch, Ian P. and Vanderstraeten, Laurens},
   journal = {arXiv preprint arXiv:2605.21597},
   year    = {2025},
+}
+```
+
+The commutator-free propagator (`alg = "cfet"`) implements the scheme
+of:
+
+```bibtex
+@article{AlvermannFehske2011,
+  title   = {High-order commutator-free exponential time-propagation of driven quantum systems},
+  author  = {Alvermann, Andreas and Fehske, Holger},
+  journal = {Journal of Computational Physics},
+  volume  = {230},
+  pages   = {5930--5956},
+  year    = {2011},
+  doi     = {10.1016/j.jcp.2011.04.006},
 }
 ```

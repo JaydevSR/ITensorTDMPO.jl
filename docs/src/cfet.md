@@ -4,6 +4,13 @@ CurrentModule = ITensorTDMPO
 
 # Commutator-free propagator (CFET)
 
+The scheme — two exponentials at two-point Gauss–Legendre nodes,
+weighted `(3 ± 2√3)/12` — is the standard fourth-order commutator-free
+exponential time propagator for driven quantum systems, introduced by
+[Alvermann & Fehske (2011)](https://doi.org/10.1016/j.jcp.2011.04.006),
+*High-order commutator-free exponential time-propagation of driven
+quantum systems*, J. Comput. Phys. 230, 5930.
+
 `alg = "cfet"` writes each step as a product of exponentials of *plain
 weighted sums* of the channel operators, evaluated at Gauss–Legendre
 nodes:
@@ -30,12 +37,11 @@ reproduces `"piecewise_constant"` exactly (measured order 2.00), which
 is a useful cross-check that the two share a limit.
 
 **`"cfet"` measured strictly better than `"magnus"`** — roughly 2×
-faster *and* ~1.5× more accurate at equal step count. It is not the
-default only because `"magnus"` was there first; switching is a
-one-word change.
+faster *and* ~1.5× more accurate at equal step count — which is why it
+is the default algorithm for [`time_evolve`](@ref).
 
 ```julia
-ψ = time_evolve(channels, ψ0, 0.0, 10.0; alg = "cfet", nsteps = 100)
+ψ = time_evolve(channels, ψ0, 0.0, 10.0; nsteps = 100)   # "cfet" by default
 ```
 
 !!! warning "A floor, not unbounded convergence"
