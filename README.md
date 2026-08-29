@@ -18,13 +18,14 @@ diagnostics. The Dyson and Magnus constructions implement part of the
 algorithms of
 [Vanthilt, Van Damme, Haegeman, McCulloch & Vanderstraeten (2025)](https://arxiv.org/abs/2605.21597).
 
-Not registered yet; not affiliated with the ITensor project.
+Registered in the Julia General registry; not affiliated with the
+ITensor project.
 
 ## Installation
 
 ```julia
 using Pkg
-Pkg.develop(path="path/to/ITensorTDMPO.jl")
+Pkg.add("ITensorTDMPO")
 ```
 
 ## Documentation

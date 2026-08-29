@@ -46,11 +46,11 @@ for what is and is not implemented relative to the paper.
 
 ## Installation
 
-Not registered yet. From the Julia REPL:
+Registered in the Julia General registry. From the Julia REPL:
 
 ```julia
 using Pkg
-Pkg.develop(path="path/to/ITensorTDMPO.jl")
+Pkg.add("ITensorTDMPO")
 ```
 
 ## Citation
