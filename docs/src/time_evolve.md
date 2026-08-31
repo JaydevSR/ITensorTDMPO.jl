@@ -43,12 +43,18 @@ Unknown algorithm names raise an `ArgumentError` listing the valid ones
 
 **Use `alg = "cfet"`** (the default) — see
 [Commutator-free propagator (CFET)](@ref), measured faster *and* more
-accurate than `alg = "magnus"` at equal step count. `alg = "dyson"` is
-size-extensive — its accuracy does not degrade with chain length, see
-[Scope and limitations](@ref) — but CFET/Magnus's exponentiation resums
-disjoint higher-order terms for free, which the plain truncated Dyson
-series does not, so CFET/Magnus are markedly more accurate at the same
-order and are the better default.
+accurate than `alg = "magnus"` at equal step count, and uniformly good
+across the whole accuracy range with no cliff at either end. `alg =
+"dyson"` is size-extensive — its accuracy does not degrade with chain
+length, see [Scope and limitations](@ref) — but CFET/Magnus's
+exponentiation resums disjoint higher-order terms for free, which the
+plain truncated Dyson series does not, so CFET/Magnus are markedly more
+accurate *at the same order*. That said, if your accuracy target is
+moderate (roughly `1e-6`–`1e-8`), `alg = "dyson"` at order 2–3 measured
+**3–6× cheaper** than `cfet`/`magnus` for comparable accuracy, because
+it applies a single MPO per step rather than running an internal TDVP
+sweep — see [When Dyson wins on cost](@ref) for the full comparison and
+where that advantage reverses.
 
 Measured infidelity against a dense RK4 reference for a driven TFIM
 chain (`Sz·Sz` + an oscillating transverse field) at fixed `dt = 0.05`,

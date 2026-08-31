@@ -51,7 +51,11 @@ The practical consequences:
   product over the rewired Hamiltonian's virtual space, so its
   *untruncated* bond dimension grows combinatorially in `N` and in the
   number of channels — fine for `order ≤ 3` and a few channels, the same
-  regime the direct construction was already limited to.
+  regime the direct construction was already limited to. Measured on a
+  two-channel model at `N = 12`: order 4 costs `12.3 s`, order 5 costs
+  `610.75 s` — a ~50× jump for one more order. See
+  [When Dyson wins on cost](@ref) for the accuracy this buys and where
+  the low-order end of this cost curve genuinely beats `cfet`/`magnus`.
 
 ## Why row compression is not implemented
 
