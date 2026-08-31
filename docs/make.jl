@@ -32,6 +32,7 @@ makedocs(;
             "Adaptive stepping" => "adaptive.md",
         ],
         "Observables and diagnostics" => "observables.md",
+        "Large-system benchmarks" => "benchmarks.md",
         "Scope and limitations" => "scope.md",
         "API reference" => "api.md",
     ],
